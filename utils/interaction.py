@@ -1,57 +1,28 @@
-﻿import subprocess
-from utils.interaction import ask_user_choice
-
-def get_available_versions(package_name):
-    try:
-        result = subprocess.check_output(
-            ["apt-cache", "madison", package_name], text=True
-        )
-        versions = [line.split("|")[1].strip() for line in result.strip().split("\n")]
-        return versions
-    except subprocess.CalledProcessError:
-        return []
-
-def install_package(package_name, version=None):
-    try:
-        if version:
-            subprocess.check_call(["sudo", "apt-get", "install", f"{package_name}={version}", "-y"])
-        else:
-            subprocess.check_call(["sudo", "apt-get", "install", package_name, "-y"])
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-def check_package_installed(package_name):
-    try:
-        subprocess.check_call(["dpkg", "-s", package_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-def handle_package_install(package_name, auto_select_version):
-    available_versions = get_available_versions(package_name)
-
-    if not available_versions:
-        print(f"No versions found for {package_name}")
-        return False
-
-    if auto_select_version:
-        selected_version = available_versions[0]
-        print(f"[AUTO] Installing latest version of {package_name}: {selected_version}")
+﻿def ask_user_choice(question, options):
+    """
+    Ask user a question with options as list or dict.
+    If dict, key is returned, value is shown.
+    """
+    if isinstance(options, dict):
+        option_list = list(options.items())
     else:
-        selected_version = ask_user_choice(
-            f"Select version of {package_name} to install", available_versions
-        )
+        option_list = list(enumerate(options, 1))
 
-    success = install_package(package_name, selected_version)
-    if not success:
-        print(f"❌ Installation of {package_name} failed.")
-        return False
+    print(f"\n{question}:")
+    for idx, val in option_list:
+        print(f"{idx}) {val}")
 
-    if not check_package_installed(package_name):
-        print(f"❌ Post-installation check failed for {package_name}.")
-        return False
-
-    print(f"✅ {package_name} installed successfully.")
-    return True
+    while True:
+        choice = input("Enter your choice: ").strip()
+        if isinstance(options, dict):
+            if choice in options:
+                return choice
+        else:
+            try:
+                choice_int = int(choice)
+                if 1 <= choice_int <= len(options):
+                    return options[choice_int - 1]
+            except ValueError:
+                pass
+        print("Invalid choice. Try again.")
 
