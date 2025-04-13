@@ -54,10 +54,11 @@ alias la='ls -a'
 alias l='ls -CF'
 """
 
-
+# Configure your attached disks here for automatic configurat of /etc/fstab
+# each disk is dictionary in format :{'name': '<disk_label>', 'mountpoint': '/mnt/<disk_label>'},
 DISKS = [
-    {'nama': 'Retropie', 'mount': '/mnt/retropie'},
-    {'nama': 'torrent', 'mount': '/mnt/torrent'},
+    {'name': 'Retropie', 'mountpoint': '/mnt/retropie'},
+    {'name': 'torrent', 'mountpoint': '/mnt/torrent'},
     ]
 
 
