@@ -44,6 +44,7 @@ BOOT_v3d_freq_min = 500
 # If AUTOMATIC_VERSION_SELECTION is enabled, the script will use the latest available version;
 # otherwise, you will be prompted to choose a version
 AUTOMATIC_VERSION_SELECTION = True
+LOCALE_ALL = "en_US.UTF-8"
 
 '''
 ------------------------------------------------------------------------------------
