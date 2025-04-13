@@ -5,6 +5,7 @@ import os
 
 from modules.system_configuration import apply_locale_settings, apply_boot_config, create_or_overwrite_bash_aliases
 from utils.os_utils import is_running_as_root
+from modules.fstab_configurator import update_fstab_with_disks
 
 if not is_running_as_root():
     print("❌ This script must be run with sudo.")
@@ -26,6 +27,7 @@ def process_system_configurations():
     #apply_locale_settings()
     apply_boot_config()
     create_or_overwrite_bash_aliases()
+    update_fstab_with_disks()
 
 def install_selected_apps():
     print("\n📦 Installing selected applications...")

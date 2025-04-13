@@ -55,6 +55,12 @@ alias l='ls -CF'
 """
 
 
+DISKS = [
+    {'nama': 'Retropie', 'mount': '/mnt/retropie'},
+    {'nama': 'torrent', 'mount': '/mnt/torrent'},
+    ]
+
+
 '''
 ------------------------------------------------------------------------------------
 ###                               APPLICATIONS                                   ###
