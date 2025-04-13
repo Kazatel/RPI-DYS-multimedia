@@ -1,21 +1,6 @@
 ﻿import os
 import config
 from datetime import datetime
-import pwd
-
-def is_running_as_root():
-    """Check if the script is run with sudo or as root."""
-    return os.geteuid() == 0
-
-def user_has_sudo_rights(user=None):
-    """Check if a user has sudo privileges (without using sudo)."""
-    try:
-        if not user:
-            user = os.getenv("SUDO_USER") or os.getenv("USER") or pwd.getpwuid(os.getuid()).pw_name
-        groups = [g.gr_name for g in os.getgrouplist(user, pwd.getpwnam(user).pw_gid)]
-        return 'sudo' in groups or 'wheel' in groups
-    except Exception:
-        return False
 
 def apply_locale_settings():
     locale = config.LOCALE_ALL.strip()

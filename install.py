@@ -4,6 +4,16 @@ import sys
 import os
 
 from modules.system_configuration import apply_locale_settings, apply_boot_config
+from utils.os_utils import is_running_as_root, user_has_sudo_rights
+
+if not is_running_as_root():
+    print("❌ This script must be run with sudo.")
+    print("👉 Please rerun with:\n")
+    print("   sudo python install.py\n")
+    if not user_has_sudo_rights():
+        print("⚠️  Warning: Current user may not have sudo privileges.")
+    sys.exit(1)
+
 
 MODULES_DIR = "modules"
 
