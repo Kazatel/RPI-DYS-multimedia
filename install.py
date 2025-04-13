@@ -10,8 +10,6 @@ if not is_running_as_root():
     print("❌ This script must be run with sudo.")
     print("👉 Please rerun with:\n")
     print("   sudo python install.py\n")
-    if not user_has_sudo_rights():
-        print("⚠️  Warning: Current user may not have sudo privileges.")
     sys.exit(1)
 
 
