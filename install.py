@@ -3,7 +3,7 @@ import config
 import sys
 import os
 
-from modules.system_configuration import apply_locale_settings, apply_overclock_settings
+from modules.system_configuration import apply_locale_settings, apply_boot_config
 
 MODULES_DIR = "modules"
 
@@ -15,8 +15,8 @@ INSTALLED_APPS = {
 
 def process_system_configurations():
     print("\n⚙️  Applying system configurations...")
-    apply_locale_settings()
-    apply_overclock_settings()
+    #apply_locale_settings()
+    apply_boot_config()
 
 def install_selected_apps():
     print("\n📦 Installing selected applications...")
