@@ -4,7 +4,7 @@ import sys
 import os
 
 from modules.system_configuration import apply_locale_settings, apply_boot_config
-from utils.os_utils import is_running_as_root, user_has_sudo_rights
+from utils.os_utils import is_running_as_root
 
 if not is_running_as_root():
     print("❌ This script must be run with sudo.")
