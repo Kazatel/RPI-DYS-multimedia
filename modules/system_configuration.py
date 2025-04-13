@@ -66,8 +66,28 @@ def apply_boot_config():
     except Exception as e:
         print(f"❌ Failed to write to {boot_config_path}: {e}")
 
+def create_or_overwrite_bash_aliases():
+    """
+    Creates or overwrites the ~/.bash_aliases file with the given content.
+
+    Args:
+        bash_aliases_content (str): The content to write to the file.
+    """
+    home_dir = os.path.expanduser("~")
+    bash_aliases_path = os.path.join(home_dir, ".bash_aliases")
+    bash_aliases_content = config.BASH_ALIASES
+    print(f"⚙️ Writing aliases to {bash_aliases_path}")
+    try:
+        with open(bash_aliases_path, "w") as f:
+            f.write(bash_aliases_content)
+        print(f"✅ Successfully created or overwritten {bash_aliases_path}")
+    except OSError as e:
+        print(f"❌ Error creating or overwriting{bash_aliases_path}: {e}")
+
+
 def main():
     apply_boot_config()
+    create_or_overwrite_bash_aliases()
 
 
 if __name__ == "__main__":

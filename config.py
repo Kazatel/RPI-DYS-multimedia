@@ -48,6 +48,13 @@ BOOT_v3d_freq_min = 500
 AUTOMATIC_VERSION_SELECTION = True
 LOCALE_ALL = "en_US.UTF-8"
 
+BASH_ALIASES = """
+alias ll='ls -l'
+alias la='ls -a'
+alias l='ls -CF'
+"""
+
+
 '''
 ------------------------------------------------------------------------------------
 ###                               APPLICATIONS                                   ###

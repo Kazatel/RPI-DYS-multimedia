@@ -1,5 +1,7 @@
 ﻿# 🎮 RPi DYS Multimedia Setup
 
+NOTE: Project is unfinished !!!
+
 A fully automated installation and configuration system for setting up a Raspberry Pi as a versatile multimedia center. Designed to be beginner-friendly, customizable, and perfect for retro gaming, streaming, and home entertainment.
 
 ---
