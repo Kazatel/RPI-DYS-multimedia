@@ -3,7 +3,7 @@ import config
 import sys
 import os
 
-from modules.system_configuration import apply_locale_settings, apply_boot_config
+from modules.system_configuration import apply_locale_settings, apply_boot_config, create_or_overwrite_bash_aliases
 from utils.os_utils import is_running_as_root
 
 if not is_running_as_root():
@@ -25,6 +25,7 @@ def process_system_configurations():
     print("\n⚙️  Applying system configurations...")
     #apply_locale_settings()
     apply_boot_config()
+    create_or_overwrite_bash_aliases()
 
 def install_selected_apps():
     print("\n📦 Installing selected applications...")
