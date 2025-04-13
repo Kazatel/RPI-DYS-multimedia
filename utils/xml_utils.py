@@ -8,28 +8,29 @@ def insert_xml_if_missing(xml_file, target_section, xml_block):
     tree = ET.parse(xml_file)
     root = tree.getroot()
 
-    # Traverse or create nested section path
-    section_path = target_section.split("-")
-    current = root
-    for section in section_path:
-        next_elem = current.find(section)
-        if next_elem is None:
-            next_elem = ET.SubElement(current, section)
-        current = next_elem
+    # Find the correct section (e.g., <files>)
+    target = root.find(target_section)
+    if target is None:
+        target = ET.SubElement(root, target_section)
 
-    # Convert the provided xml_block string to an Element
+    # Convert xml_block (str) to Element
     try:
         new_elem = ET.fromstring(xml_block.strip())
     except ET.ParseError as e:
-        raise ValueError(f"❌ Invalid XML block provided: {e}")
+        raise ValueError(f"❌ Invalid XML block: {e}")
 
-    # Compare with existing children
-    for child in current.findall(new_elem.tag):
-        if ET.tostring(child, encoding="unicode").strip() == ET.tostring(new_elem, encoding="unicode").strip():
-            print(f"✅ XML block already exists in section <{'-'.join(section_path)}> — Skipping insertion.")
+    # Check if this block already exists (based on name or URL)
+    new_name = new_elem.findtext("name")
+    new_path = new_elem.findtext("path")
+
+    for existing in target.findall("source"):
+        existing_name = existing.findtext("name")
+        existing_path = existing.findtext("path")
+        if existing_name == new_name or existing_path == new_path:
+            print(f"✅ Source '{new_name}' already exists — skipping.")
             return
 
-    # Insert the new XML block
-    current.append(new_elem)
+    # Append if not found
+    target.append(new_elem)
     tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-    print(f"✅ Inserted XML block into section <{'-'.join(section_path)}>.")
+    print(f"✅ Inserted source '{new_name}' into <{target_section}>.")
