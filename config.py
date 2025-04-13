@@ -73,5 +73,7 @@ MOONLIGHT = True
 # Specify repositories to configure (list of dictionaries: {'name': '...', 'url': '...'})
 KODI_REPOSITORIES = [
     {"name": "CDER", "url": "https://cder.sk/"},
+    {"name": "cache-sk", "url": " https://cache-sk.github.io/kodirepo/"},
+    {"name": "otaku", "url": " https://goldenfreddy0703.github.io/repository.otaku"},
 ]
 KODI_REPOSITORY_FILE_PATH = f'/home/{USER}/.kodi/userdata/sources.xml'
