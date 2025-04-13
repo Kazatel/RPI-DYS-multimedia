@@ -2,6 +2,7 @@ from utils.os_utils import get_codename
 
 OS_VERSION = get_codename()
 
+USER = 'tomas'
 
 '''
 ------------------------------------------------------------------------------------
@@ -66,4 +67,4 @@ MOONLIGHT = True
 KODI_REPOSITORIES = [
     {"name": "CDER", "url": "https://cder.sk/"},
 ]
-KODI_REPOSITORY_FILE_PATH = ':~/.kodi/userdata/sources.xml'
+KODI_REPOSITORY_FILE_PATH = f'/home/{USER}/.kodi/userdata/sources.xml'
