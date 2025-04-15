@@ -1,95 +1,121 @@
-﻿import os
+﻿import subprocess
+import os
+from utils.apt_utils import handle_package_install
+from utils.logger import Logger
 import config
-from datetime import datetime
-
-def apply_locale_settings():
-    locale = config.LOCALE_ALL.strip()
-
-    print(f"🌐 Setting all system locale settings to {locale}...")
-
-    try:
-        subprocess.run(["sudo", "update-locale", f"LANGUAGE={locale}:en"], check=True)
-        subprocess.run(["sudo", "update-locale", f"LC_ALL={locale}"], check=True)
-        print("✅ Locale settings applied successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to apply locale settings: {e}")
 
 
-def apply_boot_config():
-    boot_config_path = "/boot/firmware/config.txt"
-    marker_prefix = "# added by script"
-
-    if not os.path.exists(boot_config_path):
-        print(f"❌ Boot config not found at {boot_config_path}")
-        return
-
-    print("⚙️ Applying BOOT_* settings to /boot/firmware/config.txt")
-
-    # Prepare marker line with timestamp
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    marker_line = f"{marker_prefix} [{timestamp}]"
-
-    # Read existing content
-    try:
-        with open(boot_config_path, "r") as f:
-            lines = f.readlines()
-    except Exception as e:
-        print(f"❌ Failed to read {boot_config_path}: {e}")
-        return
-
-    # Remove existing marker block
-    new_lines = []
-    inside_old_block = False
-    for line in lines:
-        if line.startswith(marker_prefix):
-            inside_old_block = True
-            continue  # Skip marker line
-        if inside_old_block:
-            if line.strip() == "":
-                inside_old_block = False
-            continue
-        new_lines.append(line.rstrip())
-
-    # Add new block
-    new_lines.append("")
-    new_lines.append(marker_line)
-    for key, value in config.__dict__.items():
-        if key.startswith("BOOT_"):
-            setting_name = key.replace("BOOT_", "")
-            new_lines.append(f"{setting_name}={value}")
-
-    # Write updated file
-    try:
-        with open(boot_config_path, "w") as f:
-            f.write("\n".join(new_lines) + "\n")
-        print("✅ Boot configuration applied.")
-    except Exception as e:
-        print(f"❌ Failed to write to {boot_config_path}: {e}")
-
-def create_or_overwrite_bash_aliases():
+def install_prerequisites(log):
     """
-    Creates or overwrites the ~/.bash_aliases file with the given content.
+    Installs required prerequisite packages using apt.
+    """
+    log.p_info("🔧 Installing prerequisites using apt_utils...")
+    for pkg in ["git", "lsb-release"]:
+        handle_package_install(pkg, auto_select_version=True, log=log)
+
+
+def clone_retropie(log):
+    """
+    Clones the RetroPie setup script if not already present.
+    Logs the success or failure of the cloning process, and captures the git output to the log file.
+    """
+    log.p_info("📥 Cloning RetroPie setup script...")
+    if not os.path.exists("RetroPie-Setup"):
+        try:
+            log_file_path = log.get_log_file_path()
+            with open(log_file_path, "a") as logfile:
+                subprocess.run([
+                    "git", "clone", "--depth=1", "https://github.com/RetroPie/RetroPie-Setup.git"
+                ], check=True, stdout=logfile, stderr=subprocess.STDOUT)
+            log.p_info("✅ Successfully cloned RetroPie-Setup repository.")
+        except subprocess.CalledProcessError:
+            log.p_error("❌ Failed to clone RetroPie-Setup repository. See log for details.")
+    else:
+        log.p_info("✅ RetroPie-Setup folder already exists. Skipping clone.")
+
+
+
+def run_setup_script(log):
+    """
+    Executes the RetroPie setup script and logs output to the logger's file.
+    """
+    log.p_info("🚀 Running RetroPie installation script...")
+    os.chdir("RetroPie-Setup")
+
+    subprocess.run(["chmod", "+x", "retropie_setup.sh", "retropie_packages.sh"])
+
+    log_file_path = log.get_log_file_path()
+    log.tail_note()
+
+    try:
+        with open(log_file_path, "a") as logfile:
+            process = subprocess.Popen(
+                ["sudo", "./retropie_packages.sh", "setup", "basic_install"],
+                stdout=logfile,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                universal_newlines=True
+            )
+            returncode = process.wait()
+            if returncode != 0:
+                log.p_error(f"❌ RetroPie installation failed. See log for details: {log_file_path}")
+            else:
+                log.p_info("✅ RetroPie installation completed successfully.")
+    except Exception as e:
+        log.p_error(f"❌ Error during RetroPie installation: {e}")
+
+
+def is_retropie_installed():
+    """
+    Checks if RetroPie is already installed on the system.
+
+    Returns:
+        bool: True if installed, False otherwise.
+    """
+    return os.path.exists("/opt/retropie/configs")
+
+
+def get_retropie_version():
+    """
+    Retrieves the installed RetroPie version.
+
+    Returns:
+        str or None: Version string, message, or None if not found.
+    """
+    if os.path.exists("/opt/retropie/VERSION"):
+        try:
+            result = subprocess.run(["cat", "/opt/retropie/VERSION"], capture_output=True, text=True, check=True)
+            return result.stdout.strip()
+        except subprocess.CalledProcessError:
+            return "Version file exists, but could not be read."
+        except FileNotFoundError:
+            return "Version file not found."
+    else:
+        return None
+
+
+def main(log=None):
+    """
+    Main entry point for the RetroPie installation script.
 
     Args:
-        bash_aliases_content (str): The content to write to the file.
+        log (Logger, optional): Optional Logger instance. If None, a new one is created.
     """
-    home_dir = os.path.expanduser("~")
-    bash_aliases_path = os.path.join(home_dir, ".bash_aliases")
-    bash_aliases_content = config.BASH_ALIASES
-    print(f"⚙️ Writing aliases to {bash_aliases_path}")
-    try:
-        with open(bash_aliases_path, "w") as f:
-            f.write(bash_aliases_content)
-        print(f"✅ Successfully created or overwritten {bash_aliases_path}")
-    except OSError as e:
-        print(f"❌ Error creating or overwriting{bash_aliases_path}: {e}")
+    if log is None:
+        log = Logger()
 
+    if is_retropie_installed():
+        version = get_retropie_version()
+        if version:
+            log.p_info(f"✅ RetroPie is already installed. Version: {version}")
+        else:
+            log.p_info("✅ RetroPie is already installed.")
+        return
 
-def main():
-    apply_boot_config()
-    create_or_overwrite_bash_aliases()
+    install_prerequisites(log)
+    clone_retropie(log)
+    run_setup_script(log)
 
 
 if __name__ == "__main__":
     main()
-

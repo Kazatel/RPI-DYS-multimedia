@@ -1,15 +1,35 @@
 ﻿import os
 import xml.etree.ElementTree as ET
 
-def insert_xml_if_missing(xml_file, target_key, xml_block):
-    if not os.path.exists(xml_file):
-        raise FileNotFoundError(f"❌ XML file not found: {xml_file}")
+def insert_xml_if_missing(xml_file, target_key, xml_block, log=None):
+    """
+    Inserts an XML <source> block into a specific section of an existing XML file
+    (e.g., Kodi's sources.xml) if it doesn't already exist.
 
-    # Extract actual section tag (like 'files') from 'sources-files'
+    Args:
+        xml_file (str): Path to the XML file to modify.
+        target_key (str): The key indicating the section to modify, e.g., 'sources-files' (will extract 'files').
+        xml_block (str): The raw XML block to insert (must be a valid <source> element).
+        log (Logger): An instance of the custom Logger class used for logging output.
+
+    Raises:
+        FileNotFoundError: If the XML file doesn't exist.
+        ValueError: If the target key is malformed or the XML block is invalid.
+    """
+    if log is None:
+        from utils.logger import Logger
+        log = Logger()
+
+    if not os.path.exists(xml_file):
+        log.p_error(f"❌ XML file not found: {xml_file}")
+        raise FileNotFoundError(f"XML file not found: {xml_file}")
+
+    # Extract the section name (e.g., 'files') from 'sources-files'
     try:
         section_tag = target_key.split("-")[1]
     except IndexError:
-        raise ValueError(f"❌ Invalid target section key: {target_key}")
+        log.p_error(f"❌ Invalid target section key: {target_key}")
+        raise ValueError(f"Invalid target section key: {target_key}")
 
     tree = ET.parse(xml_file)
     root = tree.getroot()
@@ -17,23 +37,26 @@ def insert_xml_if_missing(xml_file, target_key, xml_block):
     target_section = root.find(section_tag)
     if target_section is None:
         target_section = ET.SubElement(root, section_tag)
+        log.p_info(f"ℹ️ Created missing section <{section_tag}> in XML.")
 
     try:
         new_elem = ET.fromstring(xml_block.strip())
     except ET.ParseError as e:
-        raise ValueError(f"❌ Invalid XML block: {e}")
+        log.p_error(f"❌ Invalid XML block: {e}")
+        raise ValueError(f"Invalid XML block: {e}")
 
     new_name = new_elem.findtext("name")
     new_path = new_elem.findtext("path")
 
-    # Check for duplicates
+    # Check if a <source> with the same name or path already exists
     for existing in target_section.findall("source"):
         existing_name = existing.findtext("name")
         existing_path = existing.findtext("path")
         if existing_name == new_name or existing_path == new_path:
-            print(f"✅ Source '{new_name}' already exists — skipping.")
+            log.p_info(f"✅ Source '{new_name}' already exists — skipping.")
             return
 
+    # Append new source
     target_section.append(new_elem)
     tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-    print(f"✅ Inserted source '{new_name}' into <{section_tag}>.")
+    log.p_info(f"✅ Inserted source '{new_name}' into <{section_tag}>.")

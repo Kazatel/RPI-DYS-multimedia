@@ -2,7 +2,7 @@
 import config
 import sys
 import os
-
+from utils.os_utils import get_raspberry_pi_model, get_codename
 from modules.system_configuration import apply_locale_settings, apply_boot_config, create_or_overwrite_bash_aliases
 from utils.os_utils import is_running_as_root
 from modules.fstab_configurator import update_fstab_with_disks
@@ -13,6 +13,40 @@ if not is_running_as_root():
     print("   sudo python install.py\n")
     sys.exit(1)
 
+
+
+def ensure_supported_pi_environment(log):
+    """
+    Validates that the Raspberry Pi model and OS version are officially supported.
+    If not supported and ON_OWN_RISK is disabled, exits the program.
+    """
+    # Check OS codename
+    os_codename = get_codename()
+    log.p_info(f"🔍 Detected OS codename: {os_codename}")
+
+    # Check Raspberry Pi model
+    pi_model = get_raspberry_pi_model()
+    log.p_info(f"🔍 Detected Raspberry Pi model: {pi_model}")
+
+    os_supported = os_codename in config.TESTED_OS_VERSION
+    model_supported = pi_model in config.TESTED_MODELS
+
+    if os_supported and model_supported:
+        log.p_info("✅ OS version and Raspberry Pi model are officially supported.")
+    else:
+        log.p_warn("⚠️ One or more components are not officially supported:")
+        if not os_supported:
+            log.p_warn(f"   - OS '{os_codename}' is not in TESTED_OS_VERSION: {config.TESTED_OS_VERSION}")
+        if not model_supported:
+            log.p_warn(f"   - Pi model '{pi_model}' is not in TESTED_MODELS: {config.TESTED_MODELS}")
+
+        if config.ON_OWN_RISK:
+            log.p_warn("⚠️ Proceeding at your own risk (ON_OWN_RISK is enabled).")
+        else:
+            log.p_error("❌ Aborting installation — unsupported environment and ON_OWN_RISK is disabled.")
+            sys.exit(1)
+
+ensure_supported_pi_model()
 
 MODULES_DIR = "modules"
 

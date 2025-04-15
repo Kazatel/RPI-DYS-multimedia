@@ -4,6 +4,7 @@ import subprocess
 from datetime import datetime
 import config
 from utils import apt_utils
+from utils.logger import Logger
 
 FSTAB_PATH = "/etc/fstab"
 FSTAB_MARKER_PREFIX = "# added by script"
@@ -33,8 +34,11 @@ def parse_blkid_output(lines):
             }
     return disks_info
 
-def update_fstab_with_disks(auto_select_version=True):
-    print("⚙️ Preparing to update /etc/fstab with external disks...")
+def update_fstab_with_disks(auto_select_version=True, log=None):
+    if log is None:
+        log = Logger()
+
+    log.p_info("⚙️ Preparing to update /etc/fstab with external disks...")
     blkid_lines = get_blkid_data()
     disks_by_label = parse_blkid_output(blkid_lines)
 
@@ -46,8 +50,17 @@ def update_fstab_with_disks(auto_select_version=True):
         mount_point = disk.get("mountpoint")
 
         if label not in disks_by_label:
-            print(f"⚠️ Disk with label '{label}' not found — skipping.")
+            log.p_warn(f"⚠️ Disk with label '{label}' not found — skipping.")
             continue
+
+        # Create mount point if it doesn't exist
+        if not os.path.exists(mount_point):
+            try:
+                os.makedirs(mount_point, exist_ok=True)
+                log.p_info(f"📁 Created mount point: {mount_point}")
+            except Exception as e:
+                log.p_error(f"❌ Failed to create mount point '{mount_point}': {e}")
+                continue  # skip this disk if we can't create the mount point
 
         disk_info = disks_by_label[label]
         uuid = disk_info["uuid"]
@@ -64,14 +77,13 @@ def update_fstab_with_disks(auto_select_version=True):
             f"UUID={uuid}\t{mount_point}\t{fs_type}\t{options}\t0\t2"
         )
 
-    # Install ntfs-3g if needed
-    if ntfs_needed:
-        print("ℹ️ NTFS filesystem detected — checking ntfs-3g...")
-        apt_utils.handle_package_install("ntfs-3g", auto_select_version)
 
-    # Load existing fstab and remove old entries
+    if ntfs_needed:
+        log.p_info("ℹ️ NTFS filesystem detected — checking ntfs-3g...")
+        apt_utils.handle_package_install("ntfs-3g", auto_select_version, log=log)
+
     if not os.path.exists(FSTAB_PATH):
-        print(f"❌ {FSTAB_PATH} not found.")
+        log.p_error(f"❌ {FSTAB_PATH} not found.")
         return
 
     with open(FSTAB_PATH, "r") as f:
@@ -87,15 +99,13 @@ def update_fstab_with_disks(auto_select_version=True):
             continue
         updated_lines.append(line.rstrip())
 
-    # Add marker with timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     updated_lines.append(f"{FSTAB_MARKER_PREFIX} {timestamp}")
     updated_lines.extend(new_lines)
 
-    # Write back to fstab
     try:
         with open(FSTAB_PATH, "w") as f:
             f.write("\n".join(updated_lines) + "\n")
-        print("✅ /etc/fstab updated successfully.")
+        log.p_info("✅ /etc/fstab updated successfully.")
     except Exception as e:
-        print(f"❌ Failed to update {FSTAB_PATH}: {e}")
+        log.p_error(f"❌ Failed to update {FSTAB_PATH}: {e}")

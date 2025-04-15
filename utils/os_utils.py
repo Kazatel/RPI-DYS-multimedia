@@ -10,8 +10,18 @@ def is_running_as_root():
 def is_command_available(command):
     return shutil.which(command) is not None
 
-def get_codename():
-    return subprocess.check_output(['lsb_release', '-cs'], text=True).strip().lower()
+def get_codename() -> str:
+    """
+    Returns the OS codename (e.g., 'bookworm', 'bullseye').
+    """
+    try:
+        output = subprocess.check_output(['lsb_release', '-cs'], text=True).strip().lower()
+        return output
+    except subprocess.CalledProcessError:
+        return "unknown"
 
-def is_supported(codenames=("bullseye", "bookworm")):
-    return get_codename() in codenames
+def is_supported(current_codename: str, tested_versions: list) -> bool:
+    """
+    Checks if the current OS codename is in the list of tested versions.
+    """
+    return current_codename in [ver.lower() for ver in tested_versions]
