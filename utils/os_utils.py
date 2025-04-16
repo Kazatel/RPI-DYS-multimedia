@@ -36,3 +36,4 @@ def get_raspberry_pi_model():
             return result.stdout.strip()
         except Exception:
             return "Unknown"
+
