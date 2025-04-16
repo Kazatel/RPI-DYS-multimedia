@@ -38,14 +38,14 @@ def ensure_supported_pi_environment():
     if os_supported and model_supported:
         log.p_info("✅ OS version and Raspberry Pi model are officially supported.")
     else:
-        log.p_warn("⚠️ One or more components are not officially supported:")
+        log.p_warning("⚠️ One or more components are not officially supported:")
         if not os_supported:
-            log.p_warn(f"   - OS '{os_codename}' is not in TESTED_OS_VERSION: {config.TESTED_OS_VERSION}")
+            log.p_warninging(f"   - OS '{os_codename}' is not in TESTED_OS_VERSION: {config.TESTED_OS_VERSION}")
         if not model_supported:
-            log.p_warn(f"   - Pi model '{pi_model}' is not in TESTED_MODELS: {config.TESTED_MODELS}")
+            log.p_warning(f"   - Pi model '{pi_model}' is not in TESTED_MODELS: {config.TESTED_MODELS}")
 
         if config.ON_OWN_RISK:
-            log.p_warn("⚠️ Proceeding at your own risk (ON_OWN_RISK is enabled).")
+            log.p_warning("⚠️ Proceeding at your own risk (ON_OWN_RISK is enabled).")
         else:
             log.p_error("❌ Aborting installation — unsupported environment and ON_OWN_RISK is disabled.")
             sys.exit(1)
