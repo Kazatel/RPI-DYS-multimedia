@@ -15,7 +15,7 @@ from modules.system_configuration import (
 )
 from modules.fstab_configurator import update_fstab_with_disks
 
-log = Logger("installer.log")
+log = Logger()
 
 # --- PRECHECK ---
 if not is_running_as_root():
@@ -42,7 +42,7 @@ def ensure_supported_pi_environment():
     else:
         log.warning("⚠️ One or more components are not officially supported:")
         if not os_supported:
-            log.warninging(f"   - OS '{os_codename}' is not in TESTED_OS_VERSION: {config.TESTED_OS_VERSION}")
+            log.warning(f"   - OS '{os_codename}' is not in TESTED_OS_VERSION: {config.TESTED_OS_VERSION}")
         if not model_supported:
             log.warning(f"   - Pi model '{pi_model}' is not in TESTED_MODELS: {config.TESTED_MODELS}")
 
@@ -57,10 +57,10 @@ def ensure_supported_pi_environment():
 def system_setup():
     ensure_supported_pi_environment()
     print("\n⚙️  Applying system configurations...")
-    apply_boot_config()
-    create_or_overwrite_bash_aliases()
-    update_fstab_with_disks()
-    # apply_locale_settings()  # Optional depending on setup
+    apply_boot_config(log)
+    create_or_overwrite_bash_aliases(log)
+    update_fstab_with_disks(log)
+    # apply_locale_settings(log)  # Optional depending on setup
     print("\n🔁 System configuration complete. Please reboot before continuing.")
 
 
@@ -147,13 +147,13 @@ def advanced_menu_loop():
 
         choice = input("\nEnter your choice: ").strip()
         if choice == "1":
-            apply_locale_settings()
+            apply_locale_settings(log)
         elif choice == "2":
-            update_fstab_with_disks()
+            update_fstab_with_disks(log)
         elif choice == "3":
-            apply_boot_config()
+            apply_boot_config(log)
         elif choice == "4":
-            create_or_overwrite_bash_aliases()
+            create_or_overwrite_bash_aliases(log)
         elif choice == "5":
             install_selected_apps(force_apps=["kodi"])
         elif choice == "6":
