@@ -29,25 +29,25 @@ def ensure_supported_pi_environment():
     os_codename = get_codename()
     pi_model = get_raspberry_pi_model()
 
-    log.p_info(f"🔍 Detected OS codename: {os_codename}")
-    log.p_info(f"🔍 Detected Raspberry Pi model: {pi_model}")
+    log.info(f"🔍 Detected OS codename: {os_codename}")
+    log.info(f"🔍 Detected Raspberry Pi model: {pi_model}")
 
     os_supported = os_codename in config.TESTED_OS_VERSION
     model_supported = pi_model in config.TESTED_MODELS
 
     if os_supported and model_supported:
-        log.p_info("✅ OS version and Raspberry Pi model are officially supported.")
+        log.info("✅ OS version and Raspberry Pi model are officially supported.")
     else:
-        log.p_warning("⚠️ One or more components are not officially supported:")
+        log.warning("⚠️ One or more components are not officially supported:")
         if not os_supported:
-            log.p_warninging(f"   - OS '{os_codename}' is not in TESTED_OS_VERSION: {config.TESTED_OS_VERSION}")
+            log.warninging(f"   - OS '{os_codename}' is not in TESTED_OS_VERSION: {config.TESTED_OS_VERSION}")
         if not model_supported:
-            log.p_warning(f"   - Pi model '{pi_model}' is not in TESTED_MODELS: {config.TESTED_MODELS}")
+            log.warning(f"   - Pi model '{pi_model}' is not in TESTED_MODELS: {config.TESTED_MODELS}")
 
         if config.ON_OWN_RISK:
-            log.p_warning("⚠️ Proceeding at your own risk (ON_OWN_RISK is enabled).")
+            log.warning("⚠️ Proceeding at your own risk (ON_OWN_RISK is enabled).")
         else:
-            log.p_error("❌ Aborting installation — unsupported environment and ON_OWN_RISK is disabled.")
+            log.error("❌ Aborting installation — unsupported environment and ON_OWN_RISK is disabled.")
             sys.exit(1)
 
 

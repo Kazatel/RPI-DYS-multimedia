@@ -38,7 +38,7 @@ def update_fstab_with_disks(auto_select_version=True, log=None):
     if log is None:
         log = Logger()
 
-    log.p_info("⚙️ Preparing to update /etc/fstab with external disks...")
+    log.info("⚙️ Preparing to update /etc/fstab with external disks...")
     blkid_lines = get_blkid_data()
     disks_by_label = parse_blkid_output(blkid_lines)
 
@@ -50,16 +50,16 @@ def update_fstab_with_disks(auto_select_version=True, log=None):
         mount_point = disk.get("mountpoint")
 
         if label not in disks_by_label:
-            log.p_warn(f"⚠️ Disk with label '{label}' not found — skipping.")
+            log.warn(f"⚠️ Disk with label '{label}' not found — skipping.")
             continue
 
         # Create mount point if it doesn't exist
         if not os.path.exists(mount_point):
             try:
                 os.makedirs(mount_point, exist_ok=True)
-                log.p_info(f"📁 Created mount point: {mount_point}")
+                log.info(f"📁 Created mount point: {mount_point}")
             except Exception as e:
-                log.p_error(f"❌ Failed to create mount point '{mount_point}': {e}")
+                log.error(f"❌ Failed to create mount point '{mount_point}': {e}")
                 continue  # skip this disk if we can't create the mount point
 
         disk_info = disks_by_label[label]
@@ -79,11 +79,11 @@ def update_fstab_with_disks(auto_select_version=True, log=None):
 
 
     if ntfs_needed:
-        log.p_info("ℹ️ NTFS filesystem detected — checking ntfs-3g...")
+        log.info("ℹ️ NTFS filesystem detected — checking ntfs-3g...")
         apt_utils.handle_package_install("ntfs-3g", auto_select_version, log=log)
 
     if not os.path.exists(FSTAB_PATH):
-        log.p_error(f"❌ {FSTAB_PATH} not found.")
+        log.error(f"❌ {FSTAB_PATH} not found.")
         return
 
     with open(FSTAB_PATH, "r") as f:
@@ -106,6 +106,6 @@ def update_fstab_with_disks(auto_select_version=True, log=None):
     try:
         with open(FSTAB_PATH, "w") as f:
             f.write("\n".join(updated_lines) + "\n")
-        log.p_info("✅ /etc/fstab updated successfully.")
+        log.info("✅ /etc/fstab updated successfully.")
     except Exception as e:
-        log.p_error(f"❌ Failed to update {FSTAB_PATH}: {e}")
+        log.error(f"❌ Failed to update {FSTAB_PATH}: {e}")

@@ -10,7 +10,7 @@
         option_list = list(enumerate(options, 1))
 
     if log:
-        log.p_info(f"\n{question}:")
+        log.info(f"\n{question}:")
     else:
         print(f"\n{question}:")
 
@@ -33,6 +33,6 @@
                 pass
 
         if log:
-            log.p_warning("Invalid choice. Try again.")
+            log.warning("Invalid choice. Try again.")
         else:
             print("Invalid choice. Try again.")

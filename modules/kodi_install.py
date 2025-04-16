@@ -70,26 +70,26 @@ def main(log=None):
 
     if is_kodi_installed():
         if getattr(config, "AUTO_UPDATE_PACKAGES", False):
-            log.p_info("🔁 Kodi is already installed. Updating as AUTO_UPDATE_PACKAGES is enabled...")
+            log.info("🔁 Kodi is already installed. Updating as AUTO_UPDATE_PACKAGES is enabled...")
         else:
             choice = ask_user_choice(
                 "✅ Kodi is already installed. Do you want to update it?",
                 {"y": "Yes, update", "n": "No, skip"}
             )
             if choice == "n":
-                log.p_info("⏩ Skipping Kodi update per user choice.")
+                log.info("⏩ Skipping Kodi update per user choice.")
                 return
 
-    log.p_info("\n📦 Installing Kodi...")
+    log.info("\n📦 Installing Kodi...")
     log.tail_note()
     success = handle_package_install(PACKAGE_NAME, config.AUTOMATIC_VERSION_SELECTION, log=log)
 
     if success:
-        log.p_info("⚙️  Configuring Kodi sources...")
+        log.info("⚙️  Configuring Kodi sources...")
         configure_kodi_sources()
-        log.p_info("✅ Kodi installation and configuration complete.")
+        log.info("✅ Kodi installation and configuration complete.")
     else:
-        log.p_error("❌ Failed to install Kodi.")
+        log.error("❌ Failed to install Kodi.")
 
 
 if __name__ == "__main__":

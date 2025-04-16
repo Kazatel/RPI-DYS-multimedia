@@ -20,7 +20,7 @@ def get_available_versions(package_name, log=None):
         return versions
     except subprocess.CalledProcessError:
         if log:
-            log.p_error(f"Failed to fetch available versions for: {package_name}")
+            log.error(f"Failed to fetch available versions for: {package_name}")
         else:
             print(f"❌ Failed to fetch available versions for: {package_name}")
         return []
@@ -46,7 +46,7 @@ def install_package(package_name, version=None, log=None):
     )
 
     if log:
-        log.p_info(f"🛠️ Installing package: {package_name}" + (f" (version {version})" if version else ""))
+        log.info(f"🛠️ Installing package: {package_name}" + (f" (version {version})" if version else ""))
         log.debug(f"Running command: {' '.join(command)}")
     
     try:
@@ -63,7 +63,7 @@ def install_package(package_name, version=None, log=None):
 
     except subprocess.CalledProcessError as e:
         if log:
-            log.p_error(f"❌ Installation of {package_name} failed. See log for details.")
+            log.error(f"❌ Installation of {package_name} failed. See log for details.")
             log.debug(f"[APT ERROR] {e.stderr.strip()}")
         else:
             print(f"❌ Installation failed: {package_name}")
@@ -115,7 +115,7 @@ def handle_package_install(package_name, auto_select_version=False, log=None):
     if auto_select_version:
         selected_version = available_versions[0]
         if log:
-            log.p_info(f"[AUTO] Installing latest version of {package_name}: {selected_version}")
+            log.info(f"[AUTO] Installing latest version of {package_name}: {selected_version}")
         else:
             print(f"[AUTO] Installing latest version of {package_name}: {selected_version}")
     else:
@@ -131,13 +131,13 @@ def handle_package_install(package_name, auto_select_version=False, log=None):
 
     if not check_package_installed(package_name):
         if log:
-            log.p_error(f"Post-installation check failed for {package_name}")
+            log.error(f"Post-installation check failed for {package_name}")
         else:
             print(f"❌ Post-installation check failed for {package_name}")
         return False
 
     if log:
-        log.p_info(f"✅ {package_name} installed successfully.")
+        log.info(f"✅ {package_name} installed successfully.")
     else:
         print(f"✅ {package_name} installed successfully.")
     return True

@@ -50,35 +50,6 @@ class Logger:
     def critical(self, message):
         self.logger.critical(message)
     
-    # Print+Log methods with underscore naming
-    def p_debug(self, message):
-        """Print to screen and log as debug"""
-        print(message)
-        self.logger.debug(message)
-    
-    def p_info(self, message):
-        """Print to screen and log as info"""
-        print(message)
-        self.logger.info(message)
-    
-    def p_warning(self, message):
-        """Print to screen and log as warning"""
-        print(message)
-        self.logger.warning(message)
-    
-    def p_error(self, message):
-        """Print to screen and log as error"""
-        print(message)
-        self.logger.error(message)
-    
-    def p_critical(self, message):
-        """Print to screen and log as critical"""
-        print(message)
-        self.logger.critical(message)
-
-    def get_log_file_path(self):
-        return self.log_file_path
-
     def tail_note(self):
         self.p_info(
             f"📡 You can monitor progress in another terminal with:\n"

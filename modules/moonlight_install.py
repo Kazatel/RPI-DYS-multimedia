@@ -43,21 +43,21 @@ def install_moonlight(log):
     if is_moonlight_installed():
         current_version = get_installed_version()
         if getattr(config, "AUTO_UPDATE_PACKAGES", False):
-            log.p_info(f"🔁 Moonlight is already installed (version: {current_version}). Updating as AUTO_UPDATE_PACKAGES is enabled...")
+            log.info(f"🔁 Moonlight is already installed (version: {current_version}). Updating as AUTO_UPDATE_PACKAGES is enabled...")
         else:
             choice = ask_user_choice(
                 f"✅ Moonlight is already installed (version: {current_version}). Do you want to update it?",
                 {"y": "Yes, update", "n": "No, skip"}
             )
             if choice == "n":
-                log.p_info("⏩ Skipping Moonlight update per user choice.")
+                log.info("⏩ Skipping Moonlight update per user choice.")
                 return True
 
-    log.p_info("\n➡️  Installing dependencies for Moonlight...")
+    log.info("\n➡️  Installing dependencies for Moonlight...")
     for dep in REQUIRED_DEPS:
         handle_package_install(dep, auto_select_version=True, log=log)
 
-    log.p_info("\n➡️  Setting up Moonlight repository...")
+    log.info("\n➡️  Setting up Moonlight repository...")
     try:
         log_file_path = log.get_log_file_path()
         with open(log_file_path, "a") as logfile:
@@ -72,10 +72,10 @@ def install_moonlight(log):
                 stderr=subprocess.STDOUT
             )
     except subprocess.CalledProcessError as e:
-        log.p_error(f"❌ Failed to set up Moonlight repository: {e}")
+        log.error(f"❌ Failed to set up Moonlight repository: {e}")
         return False
 
-    log.p_info("\n➡️  Installing Moonlight...")
+    log.info("\n➡️  Installing Moonlight...")
     log.tail_note()
     success = handle_package_install(PACKAGE_NAME, auto_select_version=True, log=log)
     return success
@@ -91,9 +91,9 @@ def main(log=None):
         log = Logger()
 
     if install_moonlight(log):
-        log.p_info("\n✅ Moonlight installed successfully!")
+        log.info("\n✅ Moonlight installed successfully!")
     else:
-        log.p_error("\n❌ Moonlight installation failed.")
+        log.error("\n❌ Moonlight installation failed.")
 
 if __name__ == "__main__":
     main()
