@@ -29,11 +29,12 @@ def is_supported(current_codename: str, tested_versions: list) -> bool:
 def get_raspberry_pi_model():
     try:
         with open("/proc/device-tree/model", "r") as f:
-            return f.read().strip()
+            return f.read().strip("\x00\n ")
     except FileNotFoundError:
         try:
             result = subprocess.run(["cat", "/sys/firmware/devicetree/base/model"], capture_output=True, text=True)
-            return result.stdout.strip()
+            return result.stdout.strip("\x00\n ")
         except Exception:
             return "Unknown"
+
 
