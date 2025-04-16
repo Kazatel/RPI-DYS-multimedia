@@ -4,6 +4,19 @@ from utils.apt_utils import handle_package_install
 from utils.logger import Logger
 import config
 
+def apply_locale_settings():
+    locale = config.LOCALE_ALL.strip()
+
+    print(f"🌐 Setting all system locale settings to {locale}...")
+
+    try:
+        subprocess.run(["sudo", "update-locale", f"LANGUAGE={locale}:en"], check=True)
+        subprocess.run(["sudo", "update-locale", f"LC_ALL={locale}"], check=True)
+        print("✅ Locale settings applied successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to apply locale settings: {e}")
+
+
 
 def install_prerequisites(log):
     """
