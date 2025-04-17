@@ -59,5 +59,5 @@ class Logger:
             f"    tail -f {self.log_file_path}"
         )
     
-     def get_log_file_path(self):
+    def get_log_file_path(self):
         return self.log_file_path
