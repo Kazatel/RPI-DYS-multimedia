@@ -80,7 +80,7 @@ def install_moonlight(log):
     success = handle_package_install(PACKAGE_NAME, auto_select_version=True, log=log)
     return success
 
-def main(log=None):
+def main_install(log=None):
     """
     Main function to run Moonlight installation.
 
@@ -96,4 +96,4 @@ def main(log=None):
         log.error("\n❌ Moonlight installation failed.")
 
 if __name__ == "__main__":
-    main()
+    main_install()

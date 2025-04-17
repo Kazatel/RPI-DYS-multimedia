@@ -157,7 +157,7 @@ def sync_retropie_directories(log):
     log.info("✅ Sync complete.")
 
 
-def main(log=None):
+def main_install(log=None):
     if log is None:
         log = Logger()
 
@@ -176,4 +176,4 @@ def main(log=None):
 
 
 if __name__ == "__main__":
-    main()
+    main_install()
