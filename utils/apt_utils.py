@@ -91,7 +91,7 @@ def check_package_installed(package_name):
         return False
 
 
-def handle_package_install(package_name, auto_select_version=False, log=None):
+def handle_package_install(package_name, auto_update_packages=False, log=None):
     """
     Orchestrates the full process of installing a package:
     - Fetches available versions
@@ -101,7 +101,7 @@ def handle_package_install(package_name, auto_select_version=False, log=None):
 
     Args:
         package_name (str): Name of the package to install.
-        auto_select_version (bool): If True, selects latest version automatically.
+        auto_update_packages (bool): If True, selects latest version automatically.
         log (Logger, optional): Logger instance for output.
 
     Returns:
@@ -112,7 +112,7 @@ def handle_package_install(package_name, auto_select_version=False, log=None):
     if not available_versions:
         return False
 
-    if auto_select_version:
+    if auto_update_packages:
         selected_version = available_versions[0]
         if log:
             log.info(f"[AUTO] Installing latest version of {package_name}: {selected_version}")

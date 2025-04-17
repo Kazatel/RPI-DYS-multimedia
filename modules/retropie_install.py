@@ -10,7 +10,7 @@ import config
 def install_prerequisites(log):
     log.info("🔧 Installing prerequisites...")
     for pkg in ["git", "lsb-release"]:
-        handle_package_install(pkg, auto_select_version=True, log=log)
+        handle_package_install(pkg, auto_update_packages=True, log=log)
 
 
 def clone_retropie(log):

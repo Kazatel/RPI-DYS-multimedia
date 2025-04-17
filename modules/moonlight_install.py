@@ -55,7 +55,7 @@ def install_moonlight(log):
 
     log.info("\n➡️  Installing dependencies for Moonlight...")
     for dep in REQUIRED_DEPS:
-        handle_package_install(dep, auto_select_version=True, log=log)
+        handle_package_install(dep, auto_update_packages=True, log=log)
 
     log.info("\n➡️  Setting up Moonlight repository...")
     try:
@@ -77,7 +77,7 @@ def install_moonlight(log):
 
     log.info("\n➡️  Installing Moonlight...")
     log.tail_note()
-    success = handle_package_install(PACKAGE_NAME, auto_select_version=True, log=log)
+    success = handle_package_install(PACKAGE_NAME, auto_update_packages=True, log=log)
     return success
 
 def main_install(log=None):

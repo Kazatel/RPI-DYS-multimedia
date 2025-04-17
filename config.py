@@ -98,7 +98,7 @@ DEFAULT FREQUENCIES BY MODEL (MHz)
 # ------------------------------------------------------------------------------------
 
 # If True, automatically selects the latest version during installs
-AUTOMATIC_VERSION_SELECTION = True
+AUTO_UPDATE_PACKAGES = True
 
 # Locale setting
 LOCALE_ALL = "en_US.UTF-8"

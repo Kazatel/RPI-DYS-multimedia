@@ -34,7 +34,7 @@ def parse_blkid_output(lines):
             }
     return disks_info
 
-def update_fstab_with_disks(auto_select_version=True, log=None):
+def update_fstab_with_disks(auto_update_packages=True, log=None):
     if log is None:
         log = Logger()
 
@@ -80,7 +80,7 @@ def update_fstab_with_disks(auto_select_version=True, log=None):
 
     if ntfs_needed:
         log.info("ℹ️ NTFS filesystem detected — checking ntfs-3g...")
-        apt_utils.handle_package_install("ntfs-3g", auto_select_version, log=log)
+        apt_utils.handle_package_install("ntfs-3g", auto_update_packages, log=log)
 
     if not os.path.exists(FSTAB_PATH):
         log.error(f"❌ {FSTAB_PATH} not found.")
