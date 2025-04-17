@@ -58,39 +58,26 @@ def is_kodi_installed():
     return check_package_installed(PACKAGE_NAME)
 
 
-def main(log=None):
-    """
-    Main function to install and configure Kodi.
-
-    Args:
-        log (Logger, optional): Logger instance. If None, a new logger is created.
-    """
+def main_install(log=None):
     if log is None:
         log = Logger()
-
-    if is_kodi_installed():
-        if getattr(config, "AUTO_UPDATE_PACKAGES", False):
-            log.info("🔁 Kodi is already installed. Updating as AUTO_UPDATE_PACKAGES is enabled...")
-        else:
-            choice = ask_user_choice(
-                "✅ Kodi is already installed. Do you want to update it?",
-                {"y": "Yes, update", "n": "No, skip"}
-            )
-            if choice == "n":
-                log.info("⏩ Skipping Kodi update per user choice.")
-                return
 
     log.info("\n📦 Installing Kodi...")
     log.tail_note()
     success = handle_package_install(PACKAGE_NAME, config.AUTOMATIC_VERSION_SELECTION, log=log)
 
-    if success:
-        log.info("⚙️  Configuring Kodi sources...")
-        configure_kodi_sources()
-        log.info("✅ Kodi installation and configuration complete.")
-    else:
+    if not success:
         log.error("❌ Failed to install Kodi.")
 
 
+def main_configure(log=None):
+    if log is None:
+        log = Logger()
+
+    log.info("⚙️  Configuring Kodi sources...")
+    configure_kodi_sources()
+    log.info("✅ Kodi configuration complete.")
+
 if __name__ == "__main__":
-    main()
+    main_install()
+    main_configure()

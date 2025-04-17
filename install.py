@@ -60,7 +60,7 @@ def system_setup():
     create_or_overwrite_bash_aliases(log)
     update_fstab_with_disks(log)
     # apply_locale_settings(log)  # Optional depending on setup
-    reboot_countdown(5)
+    reboot_countdown(10)
 
 
 # --- APPLICATION INSTALLATION ---
@@ -78,22 +78,31 @@ def install_selected_apps(force_apps=None):
             try:
                 module_path = f"{MODULES_DIR}.{app_name}_install"
                 module = importlib.import_module(module_path)
-                if hasattr(module, "main"):
-                    print(f"\n🚀 Starting installation for: {app_name.upper()}")
-                    module.main()
+                print(f"\n🚀 Starting installation for: {app_name.upper()}")
+                if hasattr(module, "main_install"):
+                    module.main_install(log=log)
                 else:
-                    print(f"⚠️  No main() function found in {module_path}.")
+                    print(f"⚠️  No main_install() function found in {module_path}.")
             except ModuleNotFoundError as e:
                 print(f"❌ Module not found for {app_name}: {e}")
 
 
-def post_install_configuration():
-    print("\n🔧 Running post-install configuration...")
-    try:
-        from modules.retropie_post_config import configure_retropie
-        configure_retropie()
-    except ImportError:
-        print("⚠️ Could not import post-install configuration module.")
+
+def configure_selected_apps(force_apps=None):
+    print("\n🔧 Configuring selected applications...")
+    for app_name, should_install in INSTALLED_APPS.items():
+        if force_apps or should_install:
+            try:
+                module_path = f"{MODULES_DIR}.{app_name}_install"
+                module = importlib.import_module(module_path)
+                print(f"\n🔧 Running configuration for: {app_name.upper()}")
+                if hasattr(module, "main_configure"):
+                    module.main_configure(log=log)
+                else:
+                    print(f"⚠️  No main_configure() function found in {module_path}.")
+            except ModuleNotFoundError as e:
+                print(f"❌ Module not found for {app_name}: {e}")
+
 
 
 # --- MENUS ---
@@ -121,7 +130,7 @@ def main_menu_loop():
         elif choice == "2":
             install_selected_apps()
         elif choice == "3":
-            post_install_configuration()
+            configure_selected_apps()
         elif choice == "4":
             advanced_menu_loop()
         elif choice == "5":
@@ -160,7 +169,7 @@ def advanced_menu_loop():
         elif choice == "7":
             install_selected_apps(force_apps=["moonlight"])
         elif choice == "8":
-            post_install_configuration()
+            configure_selected_apps()
         elif choice == "0":
             return
         else:
