@@ -136,6 +136,7 @@ KODI_REPOSITORIES = [
     {"name": "CDER", "url": "https://cder.sk/"},
     {"name": "cache-sk", "url": "https://cache-sk.github.io/kodirepo/"},
     {"name": "otaku", "url": "https://goldenfreddy0703.github.io/repository.otaku"},
+    {"name": "crew", "url": "https://team-crew.github.io"},
 ]
 
 # Location of Kodi's sources.xml for repo import
