@@ -62,7 +62,7 @@ def apply_boot_config(log):
         log.error(f"❌ Failed to write to {boot_config_path}: {e}")
 
 def create_or_overwrite_bash_aliases(log):
-    home_dir = os.path.expanduser("~")
+    home_dir = os.path.join("/home", config.USER)
     bash_aliases_path = os.path.join(home_dir, ".bash_aliases")
     bash_aliases_content = config.BASH_ALIASES
 
@@ -73,6 +73,7 @@ def create_or_overwrite_bash_aliases(log):
         log.info(f"✅ Successfully created or overwritten {bash_aliases_path}")
     except OSError as e:
         log.error(f"❌ Error creating or overwriting {bash_aliases_path}: {e}")
+
 
 def main():
     log = Logger("system_config.log")
