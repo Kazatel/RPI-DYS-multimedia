@@ -58,3 +58,6 @@ class Logger:
             f"📡 You can monitor progress in another terminal with:\n"
             f"    tail -f {self.log_file_path}"
         )
+    
+     def get_log_file_path(self):
+        return self.log_file_path
