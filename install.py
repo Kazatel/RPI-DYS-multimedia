@@ -6,7 +6,8 @@ from utils.logger import Logger
 from utils.os_utils import (
     get_raspberry_pi_model,
     get_codename,
-    is_running_as_root
+    is_running_as_root,
+    reboot_countdown
 )
 from modules.system_configuration import (
     apply_locale_settings,
@@ -59,7 +60,7 @@ def system_setup():
     create_or_overwrite_bash_aliases(log)
     update_fstab_with_disks(log)
     # apply_locale_settings(log)  # Optional depending on setup
-    print("\n🔁 System configuration complete. Please reboot before continuing.")
+    reboot_countdown(5)
 
 
 # --- APPLICATION INSTALLATION ---

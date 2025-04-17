@@ -1,7 +1,10 @@
-import os
+﻿import os
+import sys
 import subprocess
 import shutil
 import pwd
+import time
+
 
 def is_running_as_root():
     """Check if the script is run with sudo or as root."""
@@ -38,3 +41,18 @@ def get_raspberry_pi_model():
             return "Unknown"
 
 
+def reboot_countdown(seconds=10):
+    print("\n🔁 System will reboot in {} seconds...".format(seconds))
+    print("⏳ Press Ctrl+C to cancel.\n")
+    print("\n📌 After reboot, re-run the script and choose the next step to continue.\n")
+
+    try:
+        for i in range(seconds, 0, -1):
+            sys.stdout.write(f"\r💤 Rebooting in {i:2d} seconds... ")
+            sys.stdout.flush()
+            time.sleep(1)
+        print("\n\n🚀 Rebooting now...")
+        time.sleep(1)
+        os.system("sudo reboot")
+    except KeyboardInterrupt:
+        print("\n❌ Reboot cancelled. You're still in control. ✋")
