@@ -35,8 +35,6 @@ def ensure_supported_pi_environment():
     os_supported = os_codename in config.TESTED_OS_VERSION
     model_supported = pi_model in config.TESTED_MODELS
     log.info(f"DEBUG: repr(pi_model) = {repr(pi_model)}")
-    for model in config.TESTED_MODELS:
-        log.info(f"DEBUG: Comparing to TESTED_MODEL: {repr(model)}")
     if os_supported and model_supported:
         log.info("✅ OS version and Raspberry Pi model are officially supported.")
     else:
