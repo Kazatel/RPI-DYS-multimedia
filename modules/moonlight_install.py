@@ -9,50 +9,19 @@ PACKAGE_NAME = "moonlight-qt"
 REQUIRED_DEPS = ["git", "lsb-release"]
 
 def is_moonlight_installed():
-    """
-    Checks if Moonlight is already installed.
-
-    Returns:
-        bool: True if installed, False otherwise.
-    """
     return check_package_installed(PACKAGE_NAME)
 
 def get_installed_version():
-    """
-    Retrieves the currently installed version of Moonlight.
-
-    Returns:
-        str: Installed version or None if not found.
-    """
     try:
-        result = subprocess.run(["dpkg-query", "-W", "-f=${Version}", PACKAGE_NAME], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["dpkg-query", "-W", "-f=${Version}", PACKAGE_NAME],
+            capture_output=True, text=True, check=True
+        )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         return None
 
 def install_moonlight(log):
-    """
-    Installs Moonlight if not already installed or updates it if configured to do so.
-
-    Args:
-        log (Logger): Logger instance.
-
-    Returns:
-        bool: True if installation succeeded, False otherwise.
-    """
-    if is_moonlight_installed():
-        current_version = get_installed_version()
-        if getattr(config, "AUTO_UPDATE_PACKAGES", False):
-            log.info(f"🔁 Moonlight is already installed (version: {current_version}). Updating as AUTO_UPDATE_PACKAGES is enabled...")
-        else:
-            choice = ask_user_choice(
-                f"✅ Moonlight is already installed (version: {current_version}). Do you want to update it?",
-                {"y": "Yes, update", "n": "No, skip"}
-            )
-            if choice == "n":
-                log.info("⏩ Skipping Moonlight update per user choice.")
-                return True
-
     log.info("\n➡️  Installing dependencies for Moonlight...")
     for dep in REQUIRED_DEPS:
         handle_package_install(dep, auto_update_packages=True, log=log)
@@ -77,23 +46,35 @@ def install_moonlight(log):
 
     log.info("\n➡️  Installing Moonlight...")
     log.tail_note()
-    success = handle_package_install(PACKAGE_NAME, auto_update_packages=True, log=log)
-    return success
+    return handle_package_install(PACKAGE_NAME, auto_update_packages=True, log=log)
 
 def main_install(log=None):
-    """
-    Main function to run Moonlight installation.
-
-    Args:
-        log (Logger, optional): Logger instance. A new one will be created if not provided.
-    """
     if log is None:
         log = Logger()
+
+    if is_moonlight_installed():
+        current_version = get_installed_version()
+        if getattr(config, "AUTO_UPDATE_PACKAGES", False):
+            log.info(f"🔁 Moonlight is already installed (version: {current_version}). Updating as AUTO_UPDATE_PACKAGES is enabled...")
+        else:
+            choice = ask_user_choice(
+                f"✅ Moonlight is already installed (version: {current_version}). Do you want to update it?",
+                {"y": "Yes, update", "n": "No, skip"}
+            )
+            if choice == "n":
+                log.info("⏩ Skipping Moonlight update per user choice.")
+                return
 
     if install_moonlight(log):
         log.info("\n✅ Moonlight installed successfully!")
     else:
         log.error("\n❌ Moonlight installation failed.")
+
+def main_configure(log=None):
+    # Moonlight doesn't require config by default — can leave this as a stub
+    if log is None:
+        log = Logger()
+    log.info("ℹ️  No post-install configuration required for Moonlight.")
 
 if __name__ == "__main__":
     main_install()
