@@ -156,9 +156,9 @@ RETROPIE_LOCAL_PATH = f"/home/{USER}/RetroPie/"
 RETROPIE_SOURCE_PATH = "/mnt/retropie/"
 
 
-GAMEPADS = [
-    {'name': '01:10:0D:12:51:D6', 'comment': 'black_old'},
-    {'name': 'A7:0E:21:50:63:25', 'comment': 'black_new'},
-    {'name': '6A:21:21:50:63:25', 'comment': 'white_new'},
-    {'name': '01:24:11:04:0F:19', 'comment': 'white_old'}
-]
+GAMEPADS = {
+    'black_old': '01:10:0D:12:51:D6',
+    'black_new': 'A7:0E:21:50:63:25',
+    'white_new': '6A:21:21:50:63:25',
+    'white_old': '01:24:11:04:0F:19'
+}
