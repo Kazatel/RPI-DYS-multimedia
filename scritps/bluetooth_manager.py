@@ -1,7 +1,13 @@
 ﻿import subprocess
 import time
-import config
 import sys
+import os
+
+# Add the parent directory to the path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+import config
+
 
 
 def bluetoothctl_command(commands):
