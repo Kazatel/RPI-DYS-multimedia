@@ -1,28 +1,26 @@
 ﻿import subprocess
 import time
-import sys
 import os
+import sys
 
-# Add the parent directory to the path
+# Add parent directory to path to import config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 import config
 
 
-
-def bluetoothctl_command(commands):
+def bluetoothctl_command(commands, suppress_output=True):
     """Send a sequence of commands to bluetoothctl."""
     try:
-        subprocess.run(
+        result = subprocess.run(
             ["bluetoothctl"],
             input="\n".join(commands) + "\n",
             text=True,
             check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            capture_output=not suppress_output
         )
-        return True
-    except subprocess.CalledProcessError:
+        return result.stdout if not suppress_output else True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ bluetoothctl error: {e}")
         return False
 
 
@@ -40,23 +38,27 @@ def check_device_status(mac):
         return False, False, False
 
 
-def pair_gamepad(name):
-    mac = config.GAMEPADS.get(name)
-    if not mac:
-        print(f"❌ Gamepad '{name}' not found in config.")
-        return False
-
+def pair_gamepad(name, mac):
     print(f"\n🎮 Preparing to pair '{name}' ({mac})")
 
     while True:
         input("➡️  Put the gamepad in pairing mode, then press ENTER to continue...")
 
-        print("🔗 Attempting to pair, trust, and connect...")
+        print("🔍 Scanning for devices...")
         bluetoothctl_command([
             "power on",
+            "agent on",
+            "default-agent",
+            "scan on"
+        ])
+        time.sleep(5)
+
+        print("🔗 Attempting to pair, trust, and connect...")
+        bluetoothctl_command([
             f"pair {mac}",
             f"trust {mac}",
             f"connect {mac}",
+            "scan off",
             "exit"
         ])
 
@@ -70,38 +72,20 @@ def pair_gamepad(name):
             return True
         else:
             print("❌ Device not fully connected. Status:")
-            print(f"   Paired:   {paired}")
-            print(f"   Trusted:  {trusted}")
-            print(f"   Connected:{connected}")
+            print(f"   Paired:    {paired}")
+            print(f"   Trusted:   {trusted}")
+            print(f"   Connected: {connected}")
             print("🔁 Let's try again...\n")
 
 
-def connect_gamepad(name):
-    mac = config.GAMEPADS.get(name)
-    if not mac:
-        print(f"❌ Gamepad '{name}' not found in config.")
-        return False
-
-    print(f"🔗 Connecting to gamepad '{name}' ({mac})...")
-    if bluetoothctl_command(["power on", f"connect {mac}", "exit"]):
-        print(f"✅ Successfully connected to {name}.")
-        return True
-    else:
-        print(f"❌ Failed to connect to {name}.")
-        return False
+def main():
+    for name, mac in config.GAMEPADS.items():
+        success = pair_gamepad(name, mac)
+        if not success:
+            print(f"❌ Failed to pair {name} after multiple attempts.")
+        else:
+            print(f"✅ Finished pairing {name}.\n")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage:")
-        print("  python bluetooth_manager.py pair <gamepad_name>")
-        print("  python bluetooth_manager.py connect <gamepad_name>")
-    else:
-        action = sys.argv[1].lower()
-        gamepad_name = sys.argv[2]
-        if action == "pair":
-            pair_gamepad(gamepad_name)
-        elif action == "connect":
-            connect_gamepad(gamepad_name)
-        else:
-            print(f"Unknown action '{action}'. Use 'pair' or 'connect'.")
+    main()
