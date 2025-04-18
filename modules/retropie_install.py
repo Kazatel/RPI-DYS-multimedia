@@ -7,6 +7,7 @@ from utils.logger import Logger
 import config
 from utils.os_utils import get_home_directory
 
+
 def install_prerequisites(log):
     log.info("🔧 Installing prerequisites...")
     for pkg in ["git", "lsb-release"]:
@@ -38,12 +39,16 @@ def run_setup_script(log):
 
     try:
         home_dir = get_home_directory()
+        user = os.environ.get("SUDO_USER", os.environ.get("USER"))
+        if not user:
+            raise RuntimeError("❌ Could not determine non-root user for installation.")
+
         env = os.environ.copy()
-        env["HOME"] = home_dir  # Critical fix
+        env["HOME"] = home_dir  # Ensure HOME is set correctly for user context
 
         with open(log_file_path, "a") as logfile:
             process = subprocess.Popen(
-                ["sudo", "-E", "./retropie_packages.sh", "setup", "basic_install"],
+                ["sudo", "-u", user, "-E", "bash", "-c", "./retropie_packages.sh setup basic_install"],
                 stdout=logfile,
                 stderr=subprocess.STDOUT,
                 bufsize=1,
@@ -177,12 +182,13 @@ def main_install(log=None):
     install_prerequisites(log)
     clone_retropie(log)
     run_setup_script(log)
-    
+
 
 def main_configure(log=None):
     if log is None:
         log = Logger()
     sync_retropie_directories(log)
+
 
 if __name__ == "__main__":
     main_install()
