@@ -31,12 +31,40 @@ def generate_kodi_source_block(name, url, pathversion="1", allowsharing=True):
     '''
 
 
+import os
+from xml.etree import ElementTree as ET
+
 def configure_kodi_sources():
     """
-    Inserts configured Kodi repositories into the sources XML if they are missing.
+    Ensures the Kodi sources.xml file exists with a base structure,
+    then inserts configured repositories if they are missing.
     """
     xml_file = os.path.expanduser(config.KODI_REPOSITORY_FILE_PATH)
     target_section = "sources-files"
+
+    if not os.path.exists(xml_file):
+        os.makedirs(os.path.dirname(xml_file), exist_ok=True)
+        with open(xml_file, "w", encoding="utf-8") as f:
+            f.write("""<sources>
+    <programs>
+        <default pathversion="1"></default>
+    </programs>
+    <video>
+        <default pathversion="1"></default>
+    </video>
+    <music>
+        <default pathversion="1"></default>
+    </music>
+    <pictures>
+        <default pathversion="1"></default>
+    </pictures>
+    <files>
+        <default pathversion="1"></default>
+    </files>
+    <games>
+        <default pathversion="1"></default>
+    </games>
+</sources>""")
 
     for repo in config.KODI_REPOSITORIES:
         name = repo.get("name")

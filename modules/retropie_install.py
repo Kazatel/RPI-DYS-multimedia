@@ -5,7 +5,7 @@ import hashlib
 from utils.apt_utils import handle_package_install
 from utils.logger import Logger
 import config
-
+from utils.os_utils import get_home_directory
 
 def install_prerequisites(log):
     log.info("🔧 Installing prerequisites...")
