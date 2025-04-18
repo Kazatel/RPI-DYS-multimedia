@@ -37,13 +37,18 @@ def run_setup_script(log):
     log.tail_note()
 
     try:
+        home_dir = get_home_directory()
+        env = os.environ.copy()
+        env["HOME"] = home_dir  # Critical fix
+
         with open(log_file_path, "a") as logfile:
             process = subprocess.Popen(
-                ["sudo", "./retropie_packages.sh", "setup", "basic_install"],
+                ["sudo", "-E", "./retropie_packages.sh", "setup", "basic_install"],
                 stdout=logfile,
                 stderr=subprocess.STDOUT,
                 bufsize=1,
-                universal_newlines=True
+                universal_newlines=True,
+                env=env
             )
             returncode = process.wait()
             if returncode != 0:

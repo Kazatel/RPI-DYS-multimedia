@@ -56,3 +56,19 @@ def reboot_countdown(seconds=10):
         os.system("sudo reboot")
     except KeyboardInterrupt:
         print("\n❌ Reboot cancelled. You're still in control. ✋")
+
+
+def get_home_directory():
+    """
+    Returns the home directory of the user running the script, even when executed with sudo.
+    """
+    if "SUDO_USER" in os.environ:
+        return os.path.expanduser(f"~{os.environ['SUDO_USER']}")
+    return os.path.expanduser("~")
+
+def get_username():
+    """
+    Returns the name of the non-root user, even when running with sudo.
+    """
+    return os.environ.get("SUDO_USER") or os.environ.get("USER") or pwd.getpwuid(os.getuid()).pw_name
+
