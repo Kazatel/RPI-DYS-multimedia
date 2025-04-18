@@ -154,3 +154,11 @@ RETROPIE_LOCAL_PATH = f"/home/{USER}/RetroPie/"
 # External mount source path for ROMs, BIOS, splashscreens, etc.
 # The folder structure inside this path should mirror the structure of the local RetroPie directory.
 RETROPIE_SOURCE_PATH = "/mnt/retropie/"
+
+
+GAMEPADS = [
+    {'name': '01:10:0D:12:51:D6', 'comment': 'black_old'},
+    {'name': 'A7:0E:21:50:63:25', 'comment': 'black_new'},
+    {'name': '6A:21:21:50:63:25', 'comment': 'white_new'},
+    {'name': '01:24:11:04:0F:19', 'comment': 'white_old'}
+]
