@@ -172,8 +172,13 @@ def main_install(log=None):
     install_prerequisites(log)
     clone_retropie(log)
     run_setup_script(log)
-    sync_retropie_directories(log)
+    
 
+def main_configure(log=None):
+    if log is None:
+        log = Logger()
+    sync_retropie_directories(log)
 
 if __name__ == "__main__":
     main_install()
+    main_configure()

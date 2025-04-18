@@ -148,7 +148,8 @@ KODI_REPOSITORY_FILE_PATH = f'/home/{USER}/.kodi/userdata/sources.xml'
 # ------------------------------------------------------------------------------------
 
 # Where RetroPie installs and stores configs/ROMs locally
-RETROPIE_LOCAL_PATH = f"/home/{USER}/RetroPie/"
+#RETROPIE_LOCAL_PATH = f"/home/{USER}/RetroPie/"
+RETROPIE_LOCAL_PATH = f"/root/RetroPie/"
 
 # External mount source path for ROMs, BIOS, splashscreens, etc.
 # The folder structure inside this path should mirror the structure of the local RetroPie directory.
