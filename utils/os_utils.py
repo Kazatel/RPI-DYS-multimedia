@@ -83,7 +83,7 @@ def run_command(command, run_as_user=None, cwd=None, use_bash_wrapper=True):
         use_bash_wrapper (bool): If True and command is a string, run via bash -c.
 
     Returns:
-        int: Return code of the executed command.
+        tuple[int, str]: Return code and full output of the command.
     """
     if isinstance(command, str) and use_bash_wrapper:
         command = ["bash", "-c", command]
@@ -94,6 +94,7 @@ def run_command(command, run_as_user=None, cwd=None, use_bash_wrapper=True):
     log.info(f"Running command: {' '.join(command)}")
 
     try:
+        output_lines = []
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
@@ -106,11 +107,15 @@ def run_command(command, run_as_user=None, cwd=None, use_bash_wrapper=True):
 
         for line in process.stdout:
             log.log_only_no_indicator(line.strip())
+            output_lines.append(line)
 
         return_code = process.wait()
+        full_output = ''.join(output_lines)
+
         if return_code != 0:
-            raise subprocess.CalledProcessError(return_code, command)
-        return return_code
+            raise subprocess.CalledProcessError(return_code, command, output=full_output)
+
+        return return_code, full_output
 
     except subprocess.CalledProcessError as e:
         log.error(f"Command failed with return code {e.returncode}: {' '.join(command)}")
@@ -119,3 +124,4 @@ def run_command(command, run_as_user=None, cwd=None, use_bash_wrapper=True):
     except Exception as e:
         log.error(f"Error occurred while running command: {' '.join(command)}\n{str(e)}")
         raise
+
