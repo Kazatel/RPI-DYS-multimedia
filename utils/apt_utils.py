@@ -20,7 +20,6 @@ def get_available_versions(package_name, run_as_user="root"):
             ["apt-cache", "madison", package_name],
             capture_output=True,
             run_as_user=run_as_user,
-            log_path=log.get_log_file_path()
         )
         versions = [line.split("|")[1].strip() for line in result.stdout.strip().split("\n")]
         return versions
@@ -55,7 +54,6 @@ def install_package(package_name, version=None, run_as_user="root"):
     try:
         run_command(
             command,
-            log_path=log.get_log_file_path(),
             run_as_user=run_as_user,
             capture_output=True
         )

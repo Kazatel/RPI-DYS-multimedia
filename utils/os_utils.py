@@ -116,7 +116,6 @@ def run_command(
 
             for line in process.stdout:
                 log.info(line.strip())  # Log each line of the output live
-                print(line, end="")  # Optionally print to console as well
 
             return_code = process.wait()
             if return_code != 0:
@@ -137,7 +136,6 @@ def run_command(
             # Log the captured output after execution
             if result.stdout:
                 log.info(result.stdout.strip())  # Log the command output
-                print(result.stdout)  # Optional: print the output to console as well
 
             return result
 

@@ -22,7 +22,6 @@ def clone_retropie():
         try:
             run_command(
                 ["git", "clone", "--depth=1", "https://github.com/RetroPie/RetroPie-Setup.git", RETROPIE_CLONE_DIR],
-                log_path=log.get_log_file_path(),
                 run_as_user=config.APPLICATIONS["retropie"]["user"]
             )
             log.info("✅ Successfully cloned RetroPie-Setup repository.")
@@ -46,7 +45,6 @@ def run_setup_script():
     try:
         run_command(
             f"cd '{RETROPIE_CLONE_DIR}' && ./retropie_packages.sh setup basic_install",
-            log_path=log.get_log_file_path(),
             run_as_user=user,
             use_bash_wrapper=True
         )

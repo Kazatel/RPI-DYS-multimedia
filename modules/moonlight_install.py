@@ -43,7 +43,6 @@ def install_moonlight(log, run_as_user="root"):
         )
         run_command(
             ["bash", "-c", cmd],
-            log_path=log.get_log_file_path(),
             run_as_user=run_as_user
         )
     except Exception as e:
