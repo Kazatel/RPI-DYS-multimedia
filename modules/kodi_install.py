@@ -103,7 +103,7 @@ def main_install():
 
     log.info("\n📦 Installing Kodi...")
     log.tail_note()
-    success = handle_package_install(PACKAGE_NAME, config.AUTO_UPDATE_PACKAGES, log=log)
+    success = handle_package_install(PACKAGE_NAME, config.AUTO_UPDATE_PACKAGES)
 
     if not success:
         log.error("❌ Failed to install Kodi.")

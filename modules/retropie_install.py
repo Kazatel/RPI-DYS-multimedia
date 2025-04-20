@@ -13,7 +13,7 @@ RETROPIE_CLONE_DIR = os.path.join(HOME_DIR, "RetroPie-Setup")
 def install_prerequisites():
     log.info("🔧 Installing prerequisites...")
     for pkg in ["git", "lsb-release"]:
-        handle_package_install(pkg, auto_update_packages=True, log=log)
+        handle_package_install(pkg, auto_update_packages=True)
 
 
 def clone_retropie():

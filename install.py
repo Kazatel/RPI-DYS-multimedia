@@ -81,7 +81,7 @@ def install_selected_apps(force_apps=None):
                 print(f"\n🚀 Starting installation for: {app_name.upper()} (user: {user})")
                 
                 if hasattr(module, "main_install"):
-                    module.main_install(log=log, user=user)
+                    module.main_install( user=user)
                 else:
                     print(f"⚠️  No main_install() function found in {module_path}.")
             except ModuleNotFoundError as e:
@@ -103,7 +103,7 @@ def configure_selected_apps(force_apps=None):
                 print(f"\n🔧 Running configuration for: {app_name.upper()} (user: {user})")
 
                 if hasattr(module, "main_configure"):
-                    module.main_configure(log=log, user=user)
+                    module.main_configure(user=user)
                 else:
                     print(f"⚠️  No main_configure() function found in {module_path}.")
             except ModuleNotFoundError as e:

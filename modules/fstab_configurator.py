@@ -77,7 +77,7 @@ def update_fstab_with_disks(auto_update_packages=True):
 
     if ntfs_needed:
         log.info("ℹ️ NTFS filesystem detected — checking ntfs-3g...")
-        apt_utils.handle_package_install("ntfs-3g", auto_update_packages, log=log)
+        apt_utils.handle_package_install("ntfs-3g", auto_update_packages)
 
     if not os.path.exists(FSTAB_PATH):
         log.error(f"❌ {FSTAB_PATH} not found.")

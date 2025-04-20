@@ -33,7 +33,7 @@ def install_moonlight(log, run_as_user="root"):
     """
     log.info("\n➡️  Installing dependencies for Moonlight...")
     for dep in REQUIRED_DEPS:
-        handle_package_install(dep, auto_update_packages=True, log=log, run_as_user=run_as_user)
+        handle_package_install(dep, auto_update_packages=True,  run_as_user=run_as_user)
 
     log.info("\n➡️  Setting up Moonlight repository...")
     try:
@@ -52,7 +52,7 @@ def install_moonlight(log, run_as_user="root"):
 
     log.info("\n➡️  Installing Moonlight...")
     log.tail_note()
-    return handle_package_install(PACKAGE_NAME, auto_update_packages=True, log=log, run_as_user=run_as_user)
+    return handle_package_install(PACKAGE_NAME, auto_update_packages=True,  run_as_user=run_as_user)
 
 def main_install():
     """
@@ -68,7 +68,6 @@ def main_install():
             choice = ask_user_choice(
                 f"✅ Moonlight is already installed (version: {current_version}). Do you want to update it?",
                 {"y": "Yes, update", "n": "No, skip"},
-                log=log
             )
             if choice == "n":
                 log.info("⏩ Skipping Moonlight update per user choice.")

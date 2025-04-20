@@ -116,7 +116,7 @@ def handle_package_install(package_name, auto_update_packages=False, run_as_user
         selected_version = ask_user_choice(
             f"Select version of {package_name} to install",
             available_versions,
-            log=og.get_log_file_path()
+            log=log.get_log_file_path()
         )
 
     success = install_package(package_name, selected_version, run_as_user=run_as_user)
