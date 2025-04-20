@@ -1,77 +1,76 @@
-﻿import subprocess
-import os
-from utils.apt_utils import handle_package_install, check_package_installed
+﻿from utils.apt_utils import handle_package_install, check_package_installed
 from utils.logger import Logger
 from utils.interaction import ask_user_choice
+from utils.os_utils import run_command
 import config
 
 PACKAGE_NAME = "moonlight-qt"
 REQUIRED_DEPS = ["git", "lsb-release"]
 
-def is_moonlight_installed():
-    return check_package_installed(PACKAGE_NAME)
+def is_moonlight_installed(run_as_user="root"):
+    return check_package_installed(PACKAGE_NAME, run_as_user=run_as_user)
 
-def get_installed_version():
+def get_installed_version(run_as_user="root"):
     try:
-        result = subprocess.run(
+        result = run_command(
             ["dpkg-query", "-W", "-f=${Version}", PACKAGE_NAME],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            run_as_user=run_as_user
         )
         return result.stdout.strip()
-    except subprocess.CalledProcessError:
+    except Exception:
         return None
 
-def install_moonlight(log):
+def install_moonlight(log, run_as_user="root"):
     log.info("\n➡️  Installing dependencies for Moonlight...")
     for dep in REQUIRED_DEPS:
-        handle_package_install(dep, auto_update_packages=True, log=log)
+        handle_package_install(dep, auto_update_packages=True, log=log, run_as_user=run_as_user)
 
     log.info("\n➡️  Setting up Moonlight repository...")
     try:
-        log_file_path = log.get_log_file_path()
-        with open(log_file_path, "a") as logfile:
-            subprocess.run(
-                [
-                    "bash", "-c",
-                    "curl -1sLf 'https://dl.cloudsmith.io/public/moonlight-game-streaming/moonlight-qt/setup.deb.sh' | "
-                    "distro=raspbian codename=$(lsb_release -cs) sudo -E bash"
-                ],
-                check=True,
-                stdout=logfile,
-                stderr=subprocess.STDOUT
-            )
-    except subprocess.CalledProcessError as e:
+        cmd = (
+            "curl -1sLf 'https://dl.cloudsmith.io/public/moonlight-game-streaming/moonlight-qt/setup.deb.sh' | "
+            "distro=raspbian codename=$(lsb_release -cs) sudo -E bash"
+        )
+        run_command(
+            ["bash", "-c", cmd],
+            log_path=log.get_log_file_path(),
+            run_as_user=run_as_user
+        )
+    except Exception as e:
         log.error(f"❌ Failed to set up Moonlight repository: {e}")
         return False
 
     log.info("\n➡️  Installing Moonlight...")
     log.tail_note()
-    return handle_package_install(PACKAGE_NAME, auto_update_packages=True, log=log)
+    return handle_package_install(PACKAGE_NAME, auto_update_packages=True, log=log, run_as_user=run_as_user)
 
 def main_install(log=None):
     if log is None:
         log = Logger()
 
-    if is_moonlight_installed():
-        current_version = get_installed_version()
+    run_as_user = getattr(config.APPLICATIONS.get("moonlight", {}), "user", "root")
+
+    if is_moonlight_installed(run_as_user=run_as_user):
+        current_version = get_installed_version(run_as_user=run_as_user)
         if getattr(config, "AUTO_UPDATE_PACKAGES", False):
             log.info(f"🔁 Moonlight is already installed (version: {current_version}). Updating as AUTO_UPDATE_PACKAGES is enabled...")
         else:
             choice = ask_user_choice(
                 f"✅ Moonlight is already installed (version: {current_version}). Do you want to update it?",
-                {"y": "Yes, update", "n": "No, skip"}
+                {"y": "Yes, update", "n": "No, skip"},
+                log=log
             )
             if choice == "n":
                 log.info("⏩ Skipping Moonlight update per user choice.")
                 return
 
-    if install_moonlight(log):
+    if install_moonlight(log, run_as_user=run_as_user):
         log.info("\n✅ Moonlight installed successfully!")
     else:
         log.error("\n❌ Moonlight installation failed.")
 
 def main_configure(log=None):
-    # Moonlight doesn't require config by default — can leave this as a stub
     if log is None:
         log = Logger()
     log.info("ℹ️  No post-install configuration required for Moonlight.")

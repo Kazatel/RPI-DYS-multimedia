@@ -72,3 +72,68 @@ def get_username():
     """
     return os.environ.get("SUDO_USER") or os.environ.get("USER") or pwd.getpwuid(os.getuid()).pw_name
 
+
+import subprocess
+import os
+
+def run_command(command, log_path=None, run_as_user=None, cwd=None, log_live=False, use_bash_wrapper=True):
+
+    """
+    Run a shell command with optional logging, user context, and live logging.
+
+    Args:
+        command (list or str): Command to run.
+        log_path (str, optional): Path to log file.
+        run_as_user (str, optional): Username to run the command as (requires sudo).
+        cwd (str, optional): Directory to run the command from.
+        log_live (bool): If True, stream output line-by-line to log as command runs.
+
+    Returns:
+        subprocess.CompletedProcess or int: CompletedProcess if log_live=False, return code if log_live=True
+    """
+    if isinstance(command, str) and use_bash_wrapper:
+        command = ["bash", "-c", command]
+
+    if run_as_user and run_as_user != "root":
+        command = ["sudo", "-u", run_as_user] + command
+
+    logfile = open(log_path, "a") if log_path else None
+
+    try:
+        if log_live:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=cwd,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+
+            for line in process.stdout:
+                if logfile:
+                    logfile.write(line)
+                    logfile.flush()
+                else:
+                    print(line, end="")
+
+            return_code = process.wait()
+            if return_code != 0:
+                raise subprocess.CalledProcessError(return_code, command)
+            return return_code
+
+        else:
+            result = subprocess.run(
+                command,
+                check=True,
+                stdout=logfile if logfile else subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=cwd,
+                text=True,
+            )
+            return result
+
+    finally:
+        if logfile:
+            logfile.close()

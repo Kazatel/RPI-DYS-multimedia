@@ -3,6 +3,7 @@ Configuration file for Raspberry Pi Dys Multimedia Setup
 Includes system, installation, overclocking, and app settings.
 """
 
+from utils.os_utils import (get_home_directory,get_username)
 
 # ------------------------------------------------------------------------------------
 # 🖥️ SYSTEM SETTINGS
@@ -15,8 +16,11 @@ ON_OWN_RISK = False  # Allow running on untested hardware or OS
 
 
 # Default user and log location
-USER = 'tomas'
+USER = get_username()
+HOME_DIR = get_home_directory()
 LOG_DIR = '/var/log/'  # Log file: rpi_dys_multimedia.log
+
+
 
 
 # ------------------------------------------------------------------------------------
@@ -122,9 +126,20 @@ DISKS = [
 # ------------------------------------------------------------------------------------
 
 # Set to True to enable installing each application
-KODI = True
-RETROPIE = True
-MOONLIGHT = True
+APPLICATIONS = {
+    "kodi": {
+        "enabled": True,
+        "user": "root" 
+    },
+    "retropie": {
+        "enabled": True,
+        "user": USER  # ✅ this should *not* be root
+    },
+    "moonlight": {
+        "enabled": True,
+        "user": "root"
+    }
+}
 
 
 # ------------------------------------------------------------------------------------

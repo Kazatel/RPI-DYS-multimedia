@@ -1,11 +1,14 @@
 ﻿import os
 import shutil
-import subprocess
 import hashlib
 from utils.apt_utils import handle_package_install
 from utils.logger import Logger
 import config
-from utils.os_utils import get_home_directory
+from utils.os_utils import get_home_directory, run_command
+
+
+HOME_DIR = get_home_directory()
+RETROPIE_CLONE_DIR = os.path.join(HOME_DIR, "RetroPie-Setup")
 
 
 def install_prerequisites(log):
@@ -16,15 +19,15 @@ def install_prerequisites(log):
 
 def clone_retropie(log):
     log.info("📥 Cloning RetroPie setup script...")
-    if not os.path.exists("RetroPie-Setup"):
+    if not os.path.exists(RETROPIE_CLONE_DIR):
         try:
-            log_file_path = log.get_log_file_path()
-            with open(log_file_path, "a") as logfile:
-                subprocess.run([
-                    "git", "clone", "--depth=1", "https://github.com/RetroPie/RetroPie-Setup.git"
-                ], check=True, stdout=logfile, stderr=subprocess.STDOUT)
+            run_command(
+                ["git", "clone", "--depth=1", "https://github.com/RetroPie/RetroPie-Setup.git", RETROPIE_CLONE_DIR],
+                log_path=log.get_log_file_path(),
+                run_as_user=config.APPLICATIONS["retropie"]["user"]
+            )
             log.info("✅ Successfully cloned RetroPie-Setup repository.")
-        except subprocess.CalledProcessError:
+        except Exception:
             log.error("❌ Failed to clone RetroPie-Setup repository. See log for details.")
     else:
         log.info("✅ RetroPie-Setup folder already exists. Skipping clone.")
@@ -32,36 +35,25 @@ def clone_retropie(log):
 
 def run_setup_script(log):
     log.info("🚀 Running RetroPie installation script...")
-    os.chdir("RetroPie-Setup")
-    subprocess.run(["chmod", "+x", "retropie_setup.sh", "retropie_packages.sh"])
-    log_file_path = log.get_log_file_path()
+    user = config.APPLICATIONS["retropie"]["user"]
+
+    script_path = os.path.join(RETROPIE_CLONE_DIR, "retropie_packages.sh")
+    setup_path = os.path.join(RETROPIE_CLONE_DIR, "retropie_setup.sh")
+
+    run_command(["chmod", "+x", setup_path, script_path])
+
     log.tail_note()
 
     try:
-        home_dir = get_home_directory()
-        user = os.environ.get("SUDO_USER", os.environ.get("USER"))
-        if not user:
-            raise RuntimeError("❌ Could not determine non-root user for installation.")
-
-        env = os.environ.copy()
-        env["HOME"] = home_dir  # Ensure HOME is set correctly for user context
-
-        with open(log_file_path, "a") as logfile:
-            process = subprocess.Popen(
-                ["sudo", "-u", user, "-E", "bash", "-c", "./retropie_packages.sh setup basic_install"],
-                stdout=logfile,
-                stderr=subprocess.STDOUT,
-                bufsize=1,
-                universal_newlines=True,
-                env=env
-            )
-            returncode = process.wait()
-            if returncode != 0:
-                log.error("❌ RetroPie installation failed. Check the log.")
-            else:
-                log.info("✅ RetroPie installation completed successfully.")
+        run_command(
+            f"cd '{RETROPIE_CLONE_DIR}' && ./retropie_packages.sh setup basic_install",
+            log_path=log.get_log_file_path(),
+            run_as_user=user,
+            use_bash_wrapper=True
+        )
+        log.info("✅ RetroPie installation completed successfully.")
     except Exception as e:
-        log.error(f"❌ Error during RetroPie installation: {e}")
+        log.error(f"❌ RetroPie installation failed: {e}")
 
 
 def is_retropie_installed():
@@ -72,9 +64,9 @@ def get_retropie_version():
     version_file = "/opt/retropie/VERSION"
     if os.path.exists(version_file):
         try:
-            result = subprocess.run(["cat", version_file], capture_output=True, text=True, check=True)
+            result = run_command(["cat", version_file], capture_output=True)
             return result.stdout.strip()
-        except subprocess.CalledProcessError:
+        except Exception:
             return "Version file exists, but could not be read."
     return None
 
@@ -167,11 +159,11 @@ def sync_retropie_directories(log):
     log.info("✅ Sync complete.")
 
 
-def main_install(log=None):
+def main_install(log=None, force=False):
     if log is None:
         log = Logger()
 
-    if is_retropie_installed():
+    if is_retropie_installed() and not force:
         version = get_retropie_version()
         if version:
             log.info(f"✅ RetroPie already installed. Version: {version}")
@@ -191,5 +183,5 @@ def main_configure(log=None):
 
 
 if __name__ == "__main__":
-    main_install()
+    main_install(force=True)
     main_configure()

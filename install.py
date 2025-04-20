@@ -65,22 +65,24 @@ def system_setup():
 
 # --- APPLICATION INSTALLATION ---
 MODULES_DIR = "modules"
-INSTALLED_APPS = {
-    "kodi": config.KODI,
-    "retropie": config.RETROPIE,
-    "moonlight": config.MOONLIGHT,
-}
+
 
 def install_selected_apps(force_apps=None):
     print("\n📦 Installing selected applications...")
-    for app_name, should_install in INSTALLED_APPS.items():
+
+    for app_name, app_config in config.APPLICATIONS.items():
+        should_install = app_config.get("enabled", False)
+        user = app_config.get("user", "root")
+
         if force_apps or should_install:
             try:
                 module_path = f"{MODULES_DIR}.{app_name}_install"
                 module = importlib.import_module(module_path)
-                print(f"\n🚀 Starting installation for: {app_name.upper()}")
+
+                print(f"\n🚀 Starting installation for: {app_name.upper()} (user: {user})")
+                
                 if hasattr(module, "main_install"):
-                    module.main_install(log=log)
+                    module.main_install(log=log, user=user)
                 else:
                     print(f"⚠️  No main_install() function found in {module_path}.")
             except ModuleNotFoundError as e:
@@ -88,20 +90,28 @@ def install_selected_apps(force_apps=None):
 
 
 
+
 def configure_selected_apps(force_apps=None):
     print("\n🔧 Configuring selected applications...")
-    for app_name, should_install in INSTALLED_APPS.items():
-        if force_apps or should_install:
+
+    for app_name, app_config in config.APPLICATIONS.items():
+        should_configure = app_config.get("enabled", False)
+        user = app_config.get("user", "root")
+
+        if force_apps or should_configure:
             try:
                 module_path = f"{MODULES_DIR}.{app_name}_install"
                 module = importlib.import_module(module_path)
-                print(f"\n🔧 Running configuration for: {app_name.upper()}")
+
+                print(f"\n🔧 Running configuration for: {app_name.upper()} (user: {user})")
+
                 if hasattr(module, "main_configure"):
-                    module.main_configure(log=log)
+                    module.main_configure(log=log, user=user)
                 else:
                     print(f"⚠️  No main_configure() function found in {module_path}.")
             except ModuleNotFoundError as e:
                 print(f"❌ Module not found for {app_name}: {e}")
+
 
 
 
