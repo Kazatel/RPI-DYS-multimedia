@@ -2,7 +2,7 @@
 import config
 import subprocess
 from datetime import datetime
-from utils.logger import get_logger as log
+from logger import logger_instance as log
 
 
 def apply_locale_settings():

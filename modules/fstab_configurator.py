@@ -4,7 +4,7 @@ import subprocess
 from datetime import datetime
 import config
 from utils import apt_utils
-from utils.logger import get_logger as log
+from logger import logger_instance as log
 
 FSTAB_PATH = "/etc/fstab"
 FSTAB_MARKER_PREFIX = "# added by script"

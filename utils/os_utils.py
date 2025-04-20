@@ -4,7 +4,7 @@ import subprocess
 import shutil
 import pwd
 import time
-from utils.logger import get_logger as log
+from logger import logger_instance as log
 
 
 def is_running_as_root():
