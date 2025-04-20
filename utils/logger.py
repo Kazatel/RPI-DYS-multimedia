@@ -1,32 +1,38 @@
 ﻿import logging
 import os
-import config
 
 class Logger:
-    def __init__(self, log_dir=config.LOG_DIR, console_level=logging.INFO, file_level=logging.DEBUG):
+    def __init__(self, log_dir=None, console_level=logging.INFO, file_level=logging.DEBUG):
+        # Avoid circular import by importing config locally here
+        import config  # Local import to prevent circular import
+
+        self.log_dir = log_dir if log_dir else config.LOG_DIR
+        self.console_level = console_level
+        self.file_level = file_level
+
+        # ✅ Prevent adding handlers more than once
         self.logger = logging.getLogger("app_logger")
         self.logger.setLevel(logging.DEBUG)
 
-        # ✅ Prevent adding handlers more than once
         if self.logger.hasHandlers():
             return
 
         # Ensure log directory exists
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
 
-        log_file = os.path.join(log_dir, "rpi_dys_multimedia.log")
+        log_file = os.path.join(self.log_dir, "rpi_dys_multimedia.log")
         self.log_file_path = log_file
 
         # File handler
         file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(file_level)
+        file_handler.setLevel(self.file_level)
         file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(file_formatter)
 
         # Console handler
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(console_level)
+        console_handler.setLevel(self.console_level)
         console_formatter = logging.Formatter('%(levelname)s: %(message)s')
         console_handler.setFormatter(console_formatter)
 
