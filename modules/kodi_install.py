@@ -85,6 +85,19 @@ def is_kodi_installed():
     """
     return check_package_installed(PACKAGE_NAME)
 
+def launch_and_kill_kodi():
+    try:
+        command = "(kodi & sleep 10 && killall kodi.bin)"
+        return_code = run_command(
+            command,
+            run_as_user=config.USER,
+            log_live=True,
+            use_bash_wrapper=True
+        )
+        log.info(f"✅ Kodi launched and killed successfully (exit code: {return_code})")
+    except Exception as e:
+        log.error("❌ Failed to launch and kill Kodi.")
+        log.debug(f"Error: {e}")
 
 def main_install():
 
@@ -110,7 +123,8 @@ def main_install():
 
 
 def main_configure():
-
+    log.info("🚀 Launching Kodi to initialize configuration folders...")
+    launch_and_kill_kodi()
     log.info("⚙️  Configuring Kodi sources...")
     configure_kodi_sources()
     log.info("✅ Kodi configuration complete.")
