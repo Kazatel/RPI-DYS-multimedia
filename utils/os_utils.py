@@ -98,7 +98,7 @@ def run_command(command, log_path=None, run_as_user=None, cwd=None, log_live=Fal
         command = ["sudo", "-u", run_as_user] + command
 
     logfile = open(log_path, "a") if log_path else None
-
+    print (command)
     try:
         if log_live:
             process = subprocess.Popen(
