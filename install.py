@@ -57,10 +57,10 @@ def ensure_supported_pi_environment():
 def system_setup():
     ensure_supported_pi_environment()
     print("\n⚙️  Applying system configurations...")
-    apply_boot_config(log)
-    create_or_overwrite_bash_aliases(log)
-    update_fstab_with_disks(log)
-    # apply_locale_settings(log)  # Optional depending on setup
+    apply_boot_config()
+    create_or_overwrite_bash_aliases()
+    update_fstab_with_disks()
+    # apply_locale_settings()  # Optional depending on setup
     reboot_countdown(10)
 
 
