@@ -61,7 +61,7 @@ def get_retropie_version():
     version_file = "/opt/retropie/VERSION"
     if os.path.exists(version_file):
         try:
-            result = run_command(["cat", version_file], capture_output=True)
+            result = run_command(["cat", version_file])
             return result.stdout.strip()
         except Exception:
             return "Version file exists, but could not be read."

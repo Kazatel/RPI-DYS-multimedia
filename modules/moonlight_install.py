@@ -20,7 +20,6 @@ def get_installed_version(run_as_user="root"):
     try:
         result = run_command(
             ["dpkg-query", "-W", "-f=${Version}", PACKAGE_NAME],
-            capture_output=True,
             run_as_user=run_as_user
         )
         return result.stdout.strip()
