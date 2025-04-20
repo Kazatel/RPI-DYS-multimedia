@@ -43,10 +43,7 @@ def run_setup_script():
     log.tail_note()
 
     try:
-        command = (
-             f"cd {RETROPIE_CLONE_DIR} && "
-             "./retropie_packages.sh setup basic_install"
-        )
+        command = f"cd {RETROPIE_CLONE_DIR} && ./retropie_packages.sh setup basic_install"
         run_command(
             command,
             run_as_user=user,
