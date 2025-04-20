@@ -15,24 +15,31 @@ def get_available_versions(package_name, log=None, run_as_user="root"):
         list: A list of version strings (latest first). Empty if not found.
     """
     try:
+        log_path = log.get_log_file_path() if log else None
         result = run_command(
             ["apt-cache", "madison", package_name],
             capture_output=True,
             run_as_user=run_as_user,
-            log_path=log.get_log_file_path() if log else None
+            log_path=log_path
         )
 
-        output = result.stdout.strip()
         if log:
-            log.debug(f"[APT MADISON] Output for {package_name}:\n{output}")
+            log.debug(f"[MADISON RAW OUTPUT] {repr(result.stdout)}")
+
+        output = result.stdout.strip()
+        lines = output.split("\n")
 
         versions = []
-        for line in output.split("\n"):
+        for line in lines:
             parts = line.split("|")
             if len(parts) > 1:
                 versions.append(parts[1].strip())
+            else:
+                if log:
+                    log.warning(f"Skipping unrecognized madison line: {line}")
 
         return versions
+
 
     except Exception as e:
         if log:
