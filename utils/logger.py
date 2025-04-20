@@ -2,7 +2,7 @@
 import os
 
 class Logger:
-    def __init__(self, log_dir=None, console_level=logging.INFO, file_level=logging.DEBUG):
+    def __init__(self, log_dir=None, console_level=logging.DEBUG, file_level=logging.DEBUG):
         # Avoid circular import by importing config locally here
         import config  # Local import to prevent circular import
 

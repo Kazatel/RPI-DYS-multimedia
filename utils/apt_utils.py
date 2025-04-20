@@ -16,13 +16,18 @@ def get_available_versions(package_name, run_as_user="root"):
         list: A list of version strings (latest first). Empty if not found.
     """
 
-    result = run_command(
-        ["apt-cache", "madison", package_name],
-        run_as_user=run_as_user,
-    )
-    versions = [line.split("|")[1].strip() for line in result.stdout.strip().split("\n")]
-    return versions
-
+    try:
+        result = run_command(
+            ["apt-cache", "madison", package_name],
+            capture_output=True,
+            run_as_user=run_as_user,
+        )
+        versions = [line.split("|")[1].strip() for line in result.stdout.strip().split("\n")]
+        return versions
+    except Exception as e:
+        log.error(f"❌ Failed to fetch available versions for: {package_name}")
+        log.debug(f"Exception details: {e}")
+        return []
 
 
 def install_package(package_name, version=None, run_as_user="root"):
