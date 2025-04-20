@@ -16,6 +16,7 @@ def get_available_versions(package_name, log=None, run_as_user="root"):
     """
     try:
         log_path = log.get_log_file_path() if log else None
+        print (log_path)
         result = run_command(
             ["apt-cache", "madison", package_name],
             capture_output=True,
