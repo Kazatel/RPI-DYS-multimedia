@@ -2,7 +2,7 @@
 import sys
 import os
 import config
-from logger import logger_instance as log
+from utils.logger import logger_instance as log
 from utils.os_utils import (
     get_raspberry_pi_model,
     get_codename,

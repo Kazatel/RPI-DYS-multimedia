@@ -1,4 +1,4 @@
-﻿from logger import logger_instance as log
+﻿from utils.logger import logger_instance as log
 
 def ask_user_choice(question, options):
     """

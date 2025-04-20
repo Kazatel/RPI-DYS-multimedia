@@ -1,6 +1,6 @@
 ﻿import os
 import xml.etree.ElementTree as ET
-from logger import logger_instance as log
+from utils.logger import logger_instance as log
 
 def insert_xml_if_missing(xml_file, target_key, xml_block):
     """

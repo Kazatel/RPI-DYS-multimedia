@@ -2,7 +2,7 @@
 import config
 from utils.xml_utils import insert_xml_if_missing
 from utils.apt_utils import handle_package_install, check_package_installed
-from logger import logger_instance as log
+from utils.logger import logger_instance as log
 from utils.interaction import ask_user_choice
 
 PACKAGE_NAME = "kodi"

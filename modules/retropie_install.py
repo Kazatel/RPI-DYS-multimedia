@@ -2,7 +2,7 @@
 import shutil
 import hashlib
 from utils.apt_utils import handle_package_install
-from logger import logger_instance as log
+from utils.logger import logger_instance as log
 import config
 from utils.os_utils import get_home_directory, run_command
 

@@ -1,6 +1,6 @@
 ﻿from utils.interaction import ask_user_choice
 from utils.os_utils import run_command
-from logger import logger_instance as log
+from utils.logger import logger_instance as log
 
 
 def get_available_versions(package_name, run_as_user="root"):
