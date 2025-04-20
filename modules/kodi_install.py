@@ -2,7 +2,7 @@
 import config
 from utils.xml_utils import insert_xml_if_missing
 from utils.apt_utils import handle_package_install, check_package_installed
-from utils.logger import Logger
+from utils.logger import get_logger
 from utils.interaction import ask_user_choice
 
 PACKAGE_NAME = "kodi"
@@ -39,6 +39,7 @@ def configure_kodi_sources():
     Ensures the Kodi sources.xml file exists with a base structure,
     then inserts configured repositories if they are missing.
     """
+    log = get_logger()
     xml_file = os.path.expanduser(config.KODI_REPOSITORY_FILE_PATH)
     target_section = "sources-files"
 
@@ -86,9 +87,8 @@ def is_kodi_installed():
     return check_package_installed(PACKAGE_NAME)
 
 
-def main_install(log=None):
-    if log is None:
-        log = Logger()
+def main_install():
+    log = get_logger()
 
     if is_kodi_installed():
         if getattr(config, "AUTO_UPDATE_PACKAGES", False):
@@ -110,10 +110,8 @@ def main_install(log=None):
         log.error("❌ Failed to install Kodi.")
 
 
-
-def main_configure(log=None):
-    if log is None:
-        log = Logger()
+def main_configure():
+    log = get_logger()
 
     log.info("⚙️  Configuring Kodi sources...")
     configure_kodi_sources()

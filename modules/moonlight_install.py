@@ -1,5 +1,5 @@
 ﻿from utils.apt_utils import handle_package_install, check_package_installed
-from utils.logger import Logger
+from utils.logger import get_logger
 from utils.interaction import ask_user_choice
 from utils.os_utils import run_command
 import config
@@ -8,9 +8,15 @@ PACKAGE_NAME = "moonlight-qt"
 REQUIRED_DEPS = ["git", "lsb-release"]
 
 def is_moonlight_installed(run_as_user="root"):
+    """
+    Checks if Moonlight is installed.
+    """
     return check_package_installed(PACKAGE_NAME, run_as_user=run_as_user)
 
 def get_installed_version(run_as_user="root"):
+    """
+    Retrieves the installed version of Moonlight.
+    """
     try:
         result = run_command(
             ["dpkg-query", "-W", "-f=${Version}", PACKAGE_NAME],
@@ -22,6 +28,9 @@ def get_installed_version(run_as_user="root"):
         return None
 
 def install_moonlight(log, run_as_user="root"):
+    """
+    Installs Moonlight and its dependencies.
+    """
     log.info("\n➡️  Installing dependencies for Moonlight...")
     for dep in REQUIRED_DEPS:
         handle_package_install(dep, auto_update_packages=True, log=log, run_as_user=run_as_user)
@@ -45,10 +54,11 @@ def install_moonlight(log, run_as_user="root"):
     log.tail_note()
     return handle_package_install(PACKAGE_NAME, auto_update_packages=True, log=log, run_as_user=run_as_user)
 
-def main_install(log=None):
-    if log is None:
-        log = Logger()
-
+def main_install():
+    """
+    Handles the installation of Moonlight.
+    """
+    log = get_logger()
     run_as_user = getattr(config.APPLICATIONS.get("moonlight", {}), "user", "root")
 
     if is_moonlight_installed(run_as_user=run_as_user):
@@ -70,9 +80,11 @@ def main_install(log=None):
     else:
         log.error("\n❌ Moonlight installation failed.")
 
-def main_configure(log=None):
-    if log is None:
-        log = Logger()
+def main_configure():
+    """
+    Configures Moonlight after installation.
+    """
+    log = get_logger()
     log.info("ℹ️  No post-install configuration required for Moonlight.")
 
 if __name__ == "__main__":

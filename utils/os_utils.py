@@ -4,6 +4,7 @@ import subprocess
 import shutil
 import pwd
 import time
+from utils.logger import get_logger
 
 
 def is_running_as_root():
@@ -40,7 +41,6 @@ def get_raspberry_pi_model():
         except Exception:
             return "Unknown"
 
-
 def reboot_countdown(seconds=10):
     print("\n🔁 System will reboot in {} seconds...".format(seconds))
     print("⏳ Press Ctrl+C to cancel.\n")
@@ -72,13 +72,8 @@ def get_username():
     """
     return os.environ.get("SUDO_USER") or os.environ.get("USER") or pwd.getpwuid(os.getuid()).pw_name
 
-
-import subprocess
-import os
-
 def run_command(
     command,
-    log_path=None,
     run_as_user=None,
     cwd=None,
     log_live=False,
@@ -89,7 +84,6 @@ def run_command(
 
     Args:
         command (list or str): Command to run.
-        log_path (str, optional): Path to log file.
         run_as_user (str, optional): Username to run the command as (requires sudo).
         cwd (str, optional): Directory to run the command from.
         log_live (bool): If True, stream output line-by-line to log as command runs.
@@ -98,14 +92,16 @@ def run_command(
     Returns:
         subprocess.CompletedProcess or int: Result if log_live=False, return code if log_live=True
     """
+    # Access the global logger instance
+    log = get_logger()
+
     if isinstance(command, str) and use_bash_wrapper:
         command = ["bash", "-c", command]
 
     if run_as_user and run_as_user != "root":
         command = ["sudo", "-u", run_as_user] + command
 
-    logfile = open(log_path, "a") if log_path else None
-    print(command)
+    log.info(f"Running command: {' '.join(command)}")
 
     try:
         if log_live:
@@ -121,11 +117,8 @@ def run_command(
             )
 
             for line in process.stdout:
-                if logfile:
-                    logfile.write(line)
-                    logfile.flush()
-                else:
-                    print(line, end="")
+                log.info(line.strip())  # Log each line of the output live
+                print(line, end="")  # Optionally print to console as well
 
             return_code = process.wait()
             if return_code != 0:
@@ -137,7 +130,7 @@ def run_command(
             result = subprocess.run(
                 command,
                 check=True,
-                stdout=subprocess.PIPE if logfile else None,
+                stdout=subprocess.PIPE if log else None,
                 stderr=subprocess.STDOUT,
                 cwd=cwd,
                 text=True,
@@ -145,13 +138,15 @@ def run_command(
 
             # Log the captured output after execution
             if result.stdout:
-                if logfile:
-                    logfile.write(result.stdout)
-                    logfile.flush()
+                log.info(result.stdout.strip())  # Log the command output
                 print(result.stdout)  # Optional: print the output to console as well
 
             return result
 
-    finally:
-        if logfile:
-            logfile.close()
+    except subprocess.CalledProcessError as e:
+        log.error(f"Command failed with return code {e.returncode}: {' '.join(command)}")
+        raise
+
+    except Exception as e:
+        log.error(f"Error occurred while running command: {' '.join(command)}\n{str(e)}")
+        raise

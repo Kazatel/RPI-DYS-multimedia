@@ -1,30 +1,33 @@
-﻿def ask_user_choice(question, options, log=None):
+﻿from utils.logger import get_logger
+
+def ask_user_choice(question, options):
     """
     Ask user a question with options as list or dict.
     If dict, key is returned, value is shown.
     If list, value is returned directly.
     """
+    log = get_logger()  # Automatically retrieve the logger
+
     if isinstance(options, dict):
-        option_list = list(options.items())
+        option_list = list(options.items())  # Convert dict to list of tuples (key, value)
     else:
-        option_list = list(enumerate(options, 1))
+        option_list = list(enumerate(options, 1))  # Convert list to indexed options
 
-    if log:
-        log.info(f"\n{question}:")
-    else:
-        print(f"\n{question}:")
+    # Log the question
+    log.info(f"\n{question}:")
 
+    # Display options
     for idx, val in option_list:
-        print(f"{idx}) {val}")
+        log.info(f"{idx}) {val}")
 
     while True:
         choice = input("Enter your choice: ").strip()
 
-        if isinstance(options, dict):
+        if isinstance(options, dict):  # Handle dictionary input
             normalized = {str(k).lower(): k for k in options}
             if choice.lower() in normalized:
                 return normalized[choice.lower()]
-        else:
+        else:  # Handle list input
             try:
                 choice_int = int(choice)
                 if 1 <= choice_int <= len(options):
@@ -32,7 +35,5 @@
             except ValueError:
                 pass
 
-        if log:
-            log.warning("Invalid choice. Try again.")
-        else:
-            print("Invalid choice. Try again.")
+        # Invalid choice feedback
+        log.warning("Invalid choice. Please try again.")

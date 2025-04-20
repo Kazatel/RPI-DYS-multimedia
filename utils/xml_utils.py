@@ -1,7 +1,8 @@
 ﻿import os
 import xml.etree.ElementTree as ET
+from utils.logger import get_logger
 
-def insert_xml_if_missing(xml_file, target_key, xml_block, log=None):
+def insert_xml_if_missing(xml_file, target_key, xml_block):
     """
     Inserts an XML <source> block into a specific section of an existing XML file
     (e.g., Kodi's sources.xml) if it doesn't already exist.
@@ -10,15 +11,8 @@ def insert_xml_if_missing(xml_file, target_key, xml_block, log=None):
         xml_file (str): Path to the XML file to modify.
         target_key (str): The key indicating the section to modify, e.g., 'sources-files' (will extract 'files').
         xml_block (str): The raw XML block to insert (must be a valid <source> element).
-        log (Logger): An instance of the custom Logger class used for logging output.
-
-    Raises:
-        FileNotFoundError: If the XML file doesn't exist.
-        ValueError: If the target key is malformed or the XML block is invalid.
     """
-    if log is None:
-        from utils.logger import Logger
-        log = Logger()
+    log = get_logger()  # Automatically retrieve the logger
 
     if not os.path.exists(xml_file):
         log.error(f"❌ XML file not found: {xml_file}")

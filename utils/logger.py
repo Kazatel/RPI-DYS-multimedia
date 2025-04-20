@@ -1,8 +1,6 @@
 ﻿import logging
 import os
-from datetime import datetime
 import config
-
 
 class Logger:
     def __init__(self, log_dir=config.LOG_DIR, console_level=logging.INFO, file_level=logging.DEBUG):
@@ -17,7 +15,6 @@ class Logger:
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
-        # Static filename (you can keep timestamp if you want rotating logs)
         log_file = os.path.join(log_dir, "rpi_dys_multimedia.log")
         self.log_file_path = log_file
 
@@ -37,7 +34,6 @@ class Logger:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
-    # Logging methods
     def debug(self, message):
         self.logger.debug(message)
 
@@ -58,6 +54,13 @@ class Logger:
             f"📡 You can monitor progress in another terminal with:\n"
             f"    tail -f {self.log_file_path}"
         )
-    
+
     def get_log_file_path(self):
         return self.log_file_path
+
+
+# Singleton pattern to access logger instance globally
+logger_instance = Logger()
+
+def get_logger():
+    return logger_instance

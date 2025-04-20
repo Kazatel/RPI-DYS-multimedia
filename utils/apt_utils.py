@@ -14,37 +14,21 @@ def get_available_versions(package_name, log=None, run_as_user="root"):
     Returns:
         list: A list of version strings (latest first). Empty if not found.
     """
-    print(log)
-    print(dir(log))
-    log_path = log.get_log_file_path() 
-    print (log_path)
-    result = run_command(
-        ["apt-cache", "madison", package_name],
-        capture_output=True,
-        run_as_user=run_as_user,
-        log_path=log_path
-    )
-
-    if log:
-        log.debug(f"[MADISON RAW OUTPUT] {repr(result.stdout)}")
-
-    output = result.stdout.strip()
-    lines = output.split("\n")
-
-    versions = []
-    for line in lines:
-        parts = line.split("|")
-        if len(parts) > 1:
-            versions.append(parts[1].strip())
+    try:
+        result = run_command(
+            ["apt-cache", "madison", package_name],
+            capture_output=True,
+            run_as_user=run_as_user,
+            log_path=log.get_log_file_path() if log else None
+        )
+        versions = [line.split("|")[1].strip() for line in result.stdout.strip().split("\n")]
+        return versions
+    except Exception:
+        if log:
+            log.error(f"❌ Failed to fetch available versions for: {package_name}")
         else:
-            if log:
-                log.warning(f"Skipping unrecognized madison line: {line}")
-
-    return versions
-
-
-
-
+            print(f"❌ Failed to fetch available versions for: {package_name}")
+        return []
 
 
 def install_package(package_name, version=None, log=None, run_as_user="root"):

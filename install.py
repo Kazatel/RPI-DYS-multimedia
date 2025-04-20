@@ -2,7 +2,7 @@
 import sys
 import os
 import config
-from utils.logger import Logger
+from utils.logger import get_logger  # Fetch logger instance using get_logger
 from utils.os_utils import (
     get_raspberry_pi_model,
     get_codename,
@@ -16,7 +16,8 @@ from modules.system_configuration import (
 )
 from modules.fstab_configurator import update_fstab_with_disks
 
-log = Logger()
+# Fetching logger instance using get_logger() instead of directly initializing
+log = get_logger()
 
 # --- PRECHECK ---
 if not is_running_as_root():
@@ -89,8 +90,6 @@ def install_selected_apps(force_apps=None):
                 print(f"❌ Module not found for {app_name}: {e}")
 
 
-
-
 def configure_selected_apps(force_apps=None):
     print("\n🔧 Configuring selected applications...")
 
@@ -113,8 +112,6 @@ def configure_selected_apps(force_apps=None):
                 print(f"❌ Module not found for {app_name}: {e}")
 
 
-
-
 # --- MENUS ---
 def print_main_menu():
     print("\n=== Raspberry Pi Setup Assistant ===\n")
@@ -130,6 +127,7 @@ def print_main_menu():
     print("4) ⚙️  Advanced Mode")
     print("   - Run individual steps manually (no validation)")
     print("5) ❌ Exit")
+
 
 def main_menu_loop():
     while True:

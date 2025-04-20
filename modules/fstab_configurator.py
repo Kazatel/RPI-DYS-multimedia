@@ -4,7 +4,7 @@ import subprocess
 from datetime import datetime
 import config
 from utils import apt_utils
-from utils.logger import Logger
+from utils.logger import get_logger
 
 FSTAB_PATH = "/etc/fstab"
 FSTAB_MARKER_PREFIX = "# added by script"
@@ -35,8 +35,7 @@ def parse_blkid_output(lines):
     return disks_info
 
 def update_fstab_with_disks(auto_update_packages=True, log=None):
-    if log is None:
-        log = Logger()
+    log = get_logger()  # Automatically retrieve the logger instance if not passed
 
     log.info("⚙️ Preparing to update /etc/fstab with external disks...")
     blkid_lines = get_blkid_data()
@@ -76,7 +75,6 @@ def update_fstab_with_disks(auto_update_packages=True, log=None):
         new_lines.append(
             f"UUID={uuid}\t{mount_point}\t{fs_type}\t{options}\t0\t2"
         )
-
 
     if ntfs_needed:
         log.info("ℹ️ NTFS filesystem detected — checking ntfs-3g...")

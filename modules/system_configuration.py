@@ -2,9 +2,11 @@
 import config
 import subprocess
 from datetime import datetime
-from utils.logger import Logger
+from utils.logger import get_logger
 
-def apply_locale_settings(log):
+
+def apply_locale_settings():
+    log = get_logger()
     locale = config.LOCALE_ALL.strip()
 
     log.info(f"🌐 Setting all system locale settings to {locale}...")
@@ -15,7 +17,9 @@ def apply_locale_settings(log):
     except subprocess.CalledProcessError as e:
         log.error(f"❌ Failed to apply locale settings: {e}")
 
-def apply_boot_config(log):
+
+def apply_boot_config():
+    log = get_logger()
     boot_config_path = "/boot/firmware/config.txt"
     marker_prefix = "# added by script"
 
@@ -61,7 +65,9 @@ def apply_boot_config(log):
     except Exception as e:
         log.error(f"❌ Failed to write to {boot_config_path}: {e}")
 
-def create_or_overwrite_bash_aliases(log):
+
+def create_or_overwrite_bash_aliases():
+    log = get_logger()
     home_dir = os.path.join("/home", config.USER)
     bash_aliases_path = os.path.join(home_dir, ".bash_aliases")
     bash_aliases_content = config.BASH_ALIASES
@@ -76,10 +82,10 @@ def create_or_overwrite_bash_aliases(log):
 
 
 def main():
-    log = Logger("system_config.log")
-    apply_boot_config(log)
-    create_or_overwrite_bash_aliases(log)
-    apply_locale_settings(log)
+    apply_boot_config()
+    create_or_overwrite_bash_aliases()
+    apply_locale_settings()
+
 
 if __name__ == "__main__":
     main()
