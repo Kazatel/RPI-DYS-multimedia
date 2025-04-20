@@ -9,24 +9,23 @@ def get_available_versions(package_name, run_as_user="root"):
 
     Args:
         package_name (str): The name of the package to query.
-        log (Logger, optional): Logger instance for output.
         run_as_user (str): User context to run command under (default is root).
 
     Returns:
         list: A list of version strings (latest first). Empty if not found.
     """
-
     try:
-        result = run_command(
+        _, output = run_command(
             ["apt-cache", "madison", package_name],
             run_as_user=run_as_user,
         )
-        versions = [line.split("|")[1].strip() for line in result.stdout.strip().split("\n")]
+        versions = [line.split("|")[1].strip() for line in output.strip().split("\n") if "|" in line]
         return versions
     except Exception as e:
         log.error(f"❌ Failed to fetch available versions for: {package_name}")
         log.debug(f"Exception details: {e}")
         return []
+
 
 
 def install_package(package_name, version=None, run_as_user="root"):
