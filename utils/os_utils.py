@@ -87,7 +87,7 @@ def run_command(command, run_as_user=None, cwd=None, use_bash_wrapper=True):
         tuple[int, str]: Return code and full output of the command.
     """
     if isinstance(command, str) and use_bash_wrapper:
-        command = ["bash", "-c", shlex.quote(command)]
+        command = ["bash", "-c", command]
 
     if run_as_user and run_as_user != "root":
         command = ["sudo", "-u", run_as_user] + command
