@@ -19,7 +19,6 @@ def get_available_versions(package_name, run_as_user="root"):
     try:
         result = run_command(
             ["apt-cache", "madison", package_name],
-            capture_output=True,
             run_as_user=run_as_user,
         )
         versions = [line.split("|")[1].strip() for line in result.stdout.strip().split("\n")]
