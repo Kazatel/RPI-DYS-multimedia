@@ -14,8 +14,9 @@ def get_available_versions(package_name, log=None, run_as_user="root"):
     Returns:
         list: A list of version strings (latest first). Empty if not found.
     """
-
-    log_path = log.get_log_file_path() if log else None
+    print(log)
+    print(dir(log))
+    log_path = log.get_log_file_path() 
     print (log_path)
     result = run_command(
         ["apt-cache", "madison", package_name],
