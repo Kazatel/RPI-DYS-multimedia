@@ -72,27 +72,19 @@ def get_username():
     """
     return os.environ.get("SUDO_USER") or os.environ.get("USER") or pwd.getpwuid(os.getuid()).pw_name
 
-def run_command(
-    command,
-    run_as_user=None,
-    cwd=None,
-    log_live=False,
-    use_bash_wrapper=True
-):
+def run_command(command, run_as_user=None, cwd=None, use_bash_wrapper=True):
     """
-    Run a shell command with optional logging, user context, live logging, and output logging.
+    Run a shell command with optional user context and log output line-by-line.
 
     Args:
         command (list or str): Command to run.
         run_as_user (str, optional): Username to run the command as (requires sudo).
         cwd (str, optional): Directory to run the command from.
-        log_live (bool): If True, stream output line-by-line to log as command runs.
         use_bash_wrapper (bool): If True and command is a string, run via bash -c.
 
     Returns:
-        subprocess.CompletedProcess or int: Result if log_live=False, return code if log_live=True
+        int: Return code of the executed command.
     """
-
     if isinstance(command, str) and use_bash_wrapper:
         command = ["bash", "-c", command]
 
@@ -102,42 +94,23 @@ def run_command(
     log.info(f"Running command: {' '.join(command)}")
 
     try:
-        if log_live:
-            # Run the command and log output live
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                cwd=cwd,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-            )
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=cwd,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+        )
 
-            for line in process.stdout:
-                log.info(line.strip())  # Log each line of the output live
+        for line in process.stdout:
+            log.log_only_no_indicator(line.strip())
 
-            return_code = process.wait()
-            if return_code != 0:
-                raise subprocess.CalledProcessError(return_code, command)
-            return return_code
-
-        else:
-            # Run the command and capture output for later logging
-            result = subprocess.run(
-                command,
-                check=True,
-                stdout=subprocess.PIPE if log else None,
-                stderr=subprocess.STDOUT,
-                cwd=cwd,
-                text=True,
-            )
-
-            # Log the captured output after execution
-            if result.stdout:
-                log.info(result.stdout.strip())  # Log the command output
-
-            return result
+        return_code = process.wait()
+        if return_code != 0:
+            raise subprocess.CalledProcessError(return_code, command)
+        return return_code
 
     except subprocess.CalledProcessError as e:
         log.error(f"Command failed with return code {e.returncode}: {' '.join(command)}")

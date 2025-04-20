@@ -64,6 +64,15 @@ class Logger:
     def get_log_file_path(self):
         return self.log_file_path
 
+    def log_only_no_indicator(self, message):
+        for handler in self.logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.acquire()
+                try:
+                    handler.stream.write(message + '\n')
+                    handler.flush()
+                finally:
+                    handler.release()
 
 # Singleton pattern to access logger instance globally
 logger_instance = Logger()
