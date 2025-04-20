@@ -76,10 +76,16 @@ def get_username():
 import subprocess
 import os
 
-def run_command(command, log_path=None, run_as_user=None, cwd=None, log_live=False, use_bash_wrapper=True):
-
+def run_command(
+    command,
+    log_path=None,
+    run_as_user=None,
+    cwd=None,
+    log_live=False,
+    use_bash_wrapper=True
+):
     """
-    Run a shell command with optional logging, user context, and live logging.
+    Run a shell command with optional logging, user context, live logging, and output logging.
 
     Args:
         command (list or str): Command to run.
@@ -87,9 +93,10 @@ def run_command(command, log_path=None, run_as_user=None, cwd=None, log_live=Fal
         run_as_user (str, optional): Username to run the command as (requires sudo).
         cwd (str, optional): Directory to run the command from.
         log_live (bool): If True, stream output line-by-line to log as command runs.
+        use_bash_wrapper (bool): If True and command is a string, run via bash -c.
 
     Returns:
-        subprocess.CompletedProcess or int: CompletedProcess if log_live=False, return code if log_live=True
+        subprocess.CompletedProcess or int: Result if log_live=False, return code if log_live=True
     """
     if isinstance(command, str) and use_bash_wrapper:
         command = ["bash", "-c", command]
@@ -98,9 +105,11 @@ def run_command(command, log_path=None, run_as_user=None, cwd=None, log_live=Fal
         command = ["sudo", "-u", run_as_user] + command
 
     logfile = open(log_path, "a") if log_path else None
-    print (command)
+    print(command)
+
     try:
         if log_live:
+            # Run the command and log output live
             process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
@@ -124,14 +133,23 @@ def run_command(command, log_path=None, run_as_user=None, cwd=None, log_live=Fal
             return return_code
 
         else:
+            # Run the command and capture output for later logging
             result = subprocess.run(
                 command,
                 check=True,
-                stdout=logfile if logfile else subprocess.PIPE,
+                stdout=subprocess.PIPE if logfile else None,
                 stderr=subprocess.STDOUT,
                 cwd=cwd,
                 text=True,
             )
+
+            # Log the captured output after execution
+            if result.stdout:
+                if logfile:
+                    logfile.write(result.stdout)
+                    logfile.flush()
+                print(result.stdout)  # Optional: print the output to console as well
+
             return result
 
     finally:
