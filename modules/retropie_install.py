@@ -2,7 +2,7 @@
 import shutil
 import hashlib
 from utils.apt_utils import handle_package_install
-from utils.logger import get_logger
+from utils.logger import get_logger as log
 import config
 from utils.os_utils import get_home_directory, run_command
 
@@ -11,14 +11,12 @@ RETROPIE_CLONE_DIR = os.path.join(HOME_DIR, "RetroPie-Setup")
 
 
 def install_prerequisites():
-    log = get_logger()
     log.info("🔧 Installing prerequisites...")
     for pkg in ["git", "lsb-release"]:
         handle_package_install(pkg, auto_update_packages=True, log=log)
 
 
 def clone_retropie():
-    log = get_logger()
     log.info("📥 Cloning RetroPie setup script...")
     if not os.path.exists(RETROPIE_CLONE_DIR):
         try:
@@ -35,7 +33,6 @@ def clone_retropie():
 
 
 def run_setup_script():
-    log = get_logger()
     log.info("🚀 Running RetroPie installation script...")
     user = config.APPLICATIONS["retropie"]["user"]
 
@@ -91,7 +88,6 @@ def files_different(file1, file2):
 
 
 def handle_missing_folders(rel_dir):
-    log = get_logger()
     src = os.path.join(config.RETROPIE_SOURCE_PATH, rel_dir)
     dst = os.path.join(config.RETROPIE_LOCAL_PATH, rel_dir)
 
@@ -110,7 +106,6 @@ def handle_missing_folders(rel_dir):
 
 
 def sync_directory(rel_dir):
-    log = get_logger()
     src = os.path.join(config.RETROPIE_SOURCE_PATH, rel_dir)
     dst = os.path.join(config.RETROPIE_LOCAL_PATH, rel_dir)
 
@@ -149,7 +144,6 @@ def sync_directory(rel_dir):
 
 
 def sync_retropie_directories():
-    log = get_logger()
     if not config.RETROPIE_SOURCE_PATH:
         log.warn("⚠️ RETROPIE_SOURCE_PATH is not set in config. Skipping symlink setup.")
         return
@@ -165,7 +159,6 @@ def sync_retropie_directories():
 
 
 def main_install(force=False):
-    log = get_logger()
     if is_retropie_installed() and not force:
         version = get_retropie_version()
         if version:
@@ -180,7 +173,6 @@ def main_install(force=False):
 
 
 def main_configure():
-    log = get_logger()
     sync_retropie_directories()
 
 

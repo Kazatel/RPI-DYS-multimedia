@@ -1,5 +1,5 @@
 ﻿from utils.apt_utils import handle_package_install, check_package_installed
-from utils.logger import get_logger
+from utils.logger import get_logger as log
 from utils.interaction import ask_user_choice
 from utils.os_utils import run_command
 import config
@@ -58,7 +58,6 @@ def main_install():
     """
     Handles the installation of Moonlight.
     """
-    log = get_logger()
     run_as_user = getattr(config.APPLICATIONS.get("moonlight", {}), "user", "root")
 
     if is_moonlight_installed(run_as_user=run_as_user):
@@ -84,7 +83,6 @@ def main_configure():
     """
     Configures Moonlight after installation.
     """
-    log = get_logger()
     log.info("ℹ️  No post-install configuration required for Moonlight.")
 
 if __name__ == "__main__":

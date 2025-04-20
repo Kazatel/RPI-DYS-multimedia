@@ -4,7 +4,7 @@ import subprocess
 import shutil
 import pwd
 import time
-from utils.logger import get_logger
+from utils.logger import get_logger as log
 
 
 def is_running_as_root():
@@ -92,8 +92,6 @@ def run_command(
     Returns:
         subprocess.CompletedProcess or int: Result if log_live=False, return code if log_live=True
     """
-    # Access the global logger instance
-    log = get_logger()
 
     if isinstance(command, str) and use_bash_wrapper:
         command = ["bash", "-c", command]

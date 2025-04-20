@@ -1,8 +1,9 @@
 ﻿from utils.interaction import ask_user_choice
 from utils.os_utils import run_command
+from utils.logger import get_logger as log
 
 
-def get_available_versions(package_name, log=None, run_as_user="root"):
+def get_available_versions(package_name, run_as_user="root"):
     """
     Retrieves available versions of a package from apt-cache.
 
@@ -19,19 +20,16 @@ def get_available_versions(package_name, log=None, run_as_user="root"):
             ["apt-cache", "madison", package_name],
             capture_output=True,
             run_as_user=run_as_user,
-            log_path=log.get_log_file_path() if log else None
+            log_path=log.get_log_file_path()
         )
         versions = [line.split("|")[1].strip() for line in result.stdout.strip().split("\n")]
         return versions
     except Exception:
-        if log:
-            log.error(f"❌ Failed to fetch available versions for: {package_name}")
-        else:
-            print(f"❌ Failed to fetch available versions for: {package_name}")
+        log.error(f"❌ Failed to fetch available versions for: {package_name}")
         return []
 
 
-def install_package(package_name, version=None, log=None, run_as_user="root"):
+def install_package(package_name, version=None, run_as_user="root"):
     """
     Installs a package using apt-get, with optional versioning.
 
@@ -50,24 +48,22 @@ def install_package(package_name, version=None, log=None, run_as_user="root"):
         ["apt-get", "install", package_name, "-y"]
     )
 
-    if log:
-        log.info(f"🛠️ Installing package: {package_name}" + (f" (version {version})" if version else ""))
-        log.debug(f"Running command: {' '.join(command)}")
+
+    log.info(f"🛠️ Installing package: {package_name}" + (f" (version {version})" if version else ""))
+    log.debug(f"Running command: {' '.join(command)}")
 
     try:
         run_command(
             command,
-            log_path=log.get_log_file_path() if log else None,
+            log_path=log.get_log_file_path(),
             run_as_user=run_as_user,
             capture_output=True
         )
         return True
     except Exception as e:
-        if log:
-            log.error(f"❌ Installation of {package_name} failed.")
-            log.debug(f"[APT ERROR] {e}")
-        else:
-            print(f"❌ Installation failed: {package_name}")
+        log.error(f"❌ Installation of {package_name} failed.")
+        log.debug(f"[APT ERROR] {e}")
+
         return False
 
 
@@ -92,7 +88,7 @@ def check_package_installed(package_name, run_as_user="root"):
         return False
 
 
-def handle_package_install(package_name, auto_update_packages=False, log=None, run_as_user="root"):
+def handle_package_install(package_name, auto_update_packages=False, run_as_user="root"):
     """
     Orchestrates the full process of installing a package:
     - Fetches available versions
@@ -109,36 +105,27 @@ def handle_package_install(package_name, auto_update_packages=False, log=None, r
     Returns:
         bool: True if package was installed and verified, False otherwise.
     """
-    available_versions = get_available_versions(package_name, log=log, run_as_user=run_as_user)
+    available_versions = get_available_versions(package_name, run_as_user=run_as_user)
     if not available_versions:
         return False
 
     if auto_update_packages:
         selected_version = available_versions[0]
-        if log:
-            log.info(f"[AUTO] Installing latest version of {package_name}: {selected_version}")
-        else:
-            print(f"[AUTO] Installing latest version of {package_name}: {selected_version}")
+        log.info(f"[AUTO] Installing latest version of {package_name}: {selected_version}")
     else:
         selected_version = ask_user_choice(
             f"Select version of {package_name} to install",
             available_versions,
-            log=log
+            log=og.get_log_file_path()
         )
 
-    success = install_package(package_name, selected_version, log=log, run_as_user=run_as_user)
+    success = install_package(package_name, selected_version, run_as_user=run_as_user)
     if not success:
         return False
 
     if not check_package_installed(package_name, run_as_user=run_as_user):
-        if log:
-            log.error(f"❌ Post-installation check failed for {package_name}")
-        else:
-            print(f"❌ Post-installation check failed for {package_name}")
+        log.error(f"❌ Post-installation check failed for {package_name}")
         return False
 
-    if log:
-        log.info(f"✅ {package_name} installed successfully.")
-    else:
-        print(f"✅ {package_name} installed successfully.")
+    log.info(f"✅ {package_name} installed successfully.")
     return True

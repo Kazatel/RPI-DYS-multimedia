@@ -1,6 +1,6 @@
 ﻿import os
 import xml.etree.ElementTree as ET
-from utils.logger import get_logger
+from utils.logger import get_logger as log
 
 def insert_xml_if_missing(xml_file, target_key, xml_block):
     """
@@ -12,7 +12,6 @@ def insert_xml_if_missing(xml_file, target_key, xml_block):
         target_key (str): The key indicating the section to modify, e.g., 'sources-files' (will extract 'files').
         xml_block (str): The raw XML block to insert (must be a valid <source> element).
     """
-    log = get_logger()  # Automatically retrieve the logger
 
     if not os.path.exists(xml_file):
         log.error(f"❌ XML file not found: {xml_file}")

@@ -2,11 +2,10 @@
 import config
 import subprocess
 from datetime import datetime
-from utils.logger import get_logger
+from utils.logger import get_logger as log
 
 
 def apply_locale_settings():
-    log = get_logger()
     locale = config.LOCALE_ALL.strip()
 
     log.info(f"🌐 Setting all system locale settings to {locale}...")
@@ -19,7 +18,6 @@ def apply_locale_settings():
 
 
 def apply_boot_config():
-    log = get_logger()
     boot_config_path = "/boot/firmware/config.txt"
     marker_prefix = "# added by script"
 
@@ -67,7 +65,6 @@ def apply_boot_config():
 
 
 def create_or_overwrite_bash_aliases():
-    log = get_logger()
     home_dir = os.path.join("/home", config.USER)
     bash_aliases_path = os.path.join(home_dir, ".bash_aliases")
     bash_aliases_content = config.BASH_ALIASES

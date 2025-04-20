@@ -2,7 +2,7 @@
 import sys
 import os
 import config
-from utils.logger import get_logger  # Fetch logger instance using get_logger
+from utils.logger import get_logger as log
 from utils.os_utils import (
     get_raspberry_pi_model,
     get_codename,
@@ -16,8 +16,6 @@ from modules.system_configuration import (
 )
 from modules.fstab_configurator import update_fstab_with_disks
 
-# Fetching logger instance using get_logger() instead of directly initializing
-log = get_logger()
 
 # --- PRECHECK ---
 if not is_running_as_root():

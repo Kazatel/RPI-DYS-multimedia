@@ -1,4 +1,4 @@
-﻿from utils.logger import get_logger
+﻿from utils.logger import get_logger as log
 
 def ask_user_choice(question, options):
     """
@@ -6,7 +6,6 @@ def ask_user_choice(question, options):
     If dict, key is returned, value is shown.
     If list, value is returned directly.
     """
-    log = get_logger()  # Automatically retrieve the logger
 
     if isinstance(options, dict):
         option_list = list(options.items())  # Convert dict to list of tuples (key, value)
