@@ -3,7 +3,7 @@ Configuration file for Raspberry Pi Dys Multimedia Setup
 Includes system, installation, overclocking, and app settings.
 """
 
-from utils.os_utils import (get_home_directory,get_username)
+
 
 # ------------------------------------------------------------------------------------
 # 🖥️ SYSTEM SETTINGS
@@ -16,8 +16,8 @@ ON_OWN_RISK = False  # Allow running on untested hardware or OS
 
 
 # Default user and log location
-USER = get_username()
-HOME_DIR = get_home_directory()
+USER = 'tomas'
+HOME_DIR = '/home/{USER}'
 LOG_DIR = '/var/log/'  # Log file: rpi_dys_multimedia.log
 
 
