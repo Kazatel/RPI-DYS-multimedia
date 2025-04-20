@@ -34,7 +34,7 @@ def parse_blkid_output(lines):
             }
     return disks_info
 
-def update_fstab_with_disks(auto_update_packages=True, log=None):
+def update_fstab_with_disks(auto_update_packages=True):
 
     log.info("⚙️ Preparing to update /etc/fstab with external disks...")
     blkid_lines = get_blkid_data()
