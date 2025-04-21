@@ -19,12 +19,12 @@ import config
 
 class BluetoothctlProcess:
     """Interactive bluetoothctl process wrapper with timeout control"""
-    
+
     def __init__(self, timeout=30):
         self.process = None
         self.timeout = timeout
         self.output_buffer = ""
-        
+
     def __enter__(self):
         """Start bluetoothctl process when entering context"""
         self.process = subprocess.Popen(
@@ -37,7 +37,7 @@ class BluetoothctlProcess:
             universal_newlines=True
         )
         return self
-        
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Clean up process when exiting context"""
         if self.process:
@@ -47,64 +47,64 @@ class BluetoothctlProcess:
                 self.process.wait(timeout=2)
             except:
                 self.process.kill()
-                
+
     def send_command(self, command, wait_for=None, timeout=None):
         """
         Send command to bluetoothctl and optionally wait for specific output
-        
+
         Args:
             command: Command to send
             wait_for: String or regex pattern to wait for in output
             timeout: Custom timeout for this command (uses default if None)
-            
+
         Returns:
             Collected output as string
         """
         if not self.process:
             raise RuntimeError("Process not started")
-            
+
         # Use default timeout if not specified
         if timeout is None:
             timeout = self.timeout
-            
+
         # Send command
         self.process.stdin.write(command + "\n")
         self.process.stdin.flush()
-        
+
         # If no wait condition, return immediately
         if not wait_for:
             return ""
-            
+
         # Prepare regex pattern if wait_for is a string
         if isinstance(wait_for, str):
             pattern = re.compile(re.escape(wait_for))
         else:
             pattern = wait_for
-            
+
         # Wait for output with timeout
         output = ""
         start_time = time.time()
-        
+
         while time.time() - start_time < timeout:
             # Check if there's data to read with a small timeout
             ready, _, _ = select.select([self.process.stdout], [], [], 0.1)
-            
+
             if ready:
                 line = self.process.stdout.readline()
                 if not line:  # EOF
                     break
-                    
+
                 output += line
                 print(f"  > {line.strip()}")
-                
+
                 # Check if we got what we're waiting for
                 if pattern.search(line):
                     return output
-                    
+
         # If we get here, we timed out
         print(f"⚠️ Timeout waiting for: {wait_for}")
         return output
-        
+
     def wait_for_pairing_success(self, mac, timeout=None):
         """
         Wait for successful pairing messages
@@ -112,32 +112,32 @@ class BluetoothctlProcess:
         """
         if timeout is None:
             timeout = self.timeout
-            
+
         start_time = time.time()
         success_patterns = [
             re.compile(r"Pairing successful"),
             re.compile(r"Connection successful")
         ]
-        
+
         while time.time() - start_time < timeout:
             ready, _, _ = select.select([self.process.stdout], [], [], 0.1)
-            
+
             if ready:
                 line = self.process.stdout.readline()
                 if not line:  # EOF
                     break
-                    
+
                 print(f"  > {line.strip()}")
-                
+
                 # Check for success patterns
                 for pattern in success_patterns:
                     if pattern.search(line):
                         return True
-                        
+
                 # Check for common failure patterns
                 if "Failed to pair" in line or "Connection failed" in line:
                     return False
-                    
+
         # Timeout reached
         return False
 
@@ -154,44 +154,44 @@ def check_device_status(mac):
         return False, False, False
 
 
-def discover_devices(scan_time=10):
+def discover_devices(scan_time=20):
     """
     Scan for Bluetooth devices with proper timeout handling
     Returns dict of MAC -> Name
     """
     print("🔍 Scanning for Bluetooth devices...")
     devices = {}
-    
+
     with BluetoothctlProcess(timeout=scan_time+5) as bt:
         # Turn on scanning
         bt.send_command("power on")
         bt.send_command("scan on")
-        
+
         # Wait for scan_time seconds
         print(f"⏳ Scanning for {scan_time} seconds...")
         start_time = time.time()
-        
+
         while time.time() - start_time < scan_time:
             ready, _, _ = select.select([bt.process.stdout], [], [], 0.1)
-            
+
             if ready:
                 line = bt.process.stdout.readline()
                 if not line:
                     break
-                    
+
                 # Look for device discoveries
                 match = re.search(r"Device ([\w:]+) (.+)", line)
                 if match:
                     mac, name = match.groups()
                     devices[mac] = name
                     print(f"  📱 Found: {name} ({mac})")
-                    
+
             # Small sleep to prevent CPU hogging
             time.sleep(0.01)
-            
+
         # Turn off scanning
         bt.send_command("scan off")
-        
+
     return devices
 
 
@@ -202,49 +202,49 @@ def pair_device(mac, timeout=30):
     """
     print(f"\n🔗 Pairing with {mac}...")
     print("⏳ This may take some time. Please wait...")
-    
+
     with BluetoothctlProcess(timeout=timeout) as bt:
         # Setup agent
         bt.send_command("power on")
         bt.send_command("agent on")
         bt.send_command("default-agent")
-        
+
         # Start pairing
         print("📲 Sending pair command...")
         bt.send_command(f"pair {mac}")
-        
+
         # Wait for pairing to complete
         pairing_success = bt.wait_for_pairing_success(mac, timeout=timeout)
-        
+
         if not pairing_success:
             print("❌ Pairing failed or timed out")
             return False
-            
+
         # Trust device
         print("🔒 Trusting device...")
         bt.send_command(f"trust {mac}")
         time.sleep(2)  # Give it time to process
-        
+
         # Connect to device
         print("🔌 Connecting to device...")
         bt.send_command(f"connect {mac}")
-        
+
         # Wait for connection to complete
         connection_success = bt.wait_for_pairing_success(mac, timeout=timeout)
-        
+
         if not connection_success:
             print("⚠️ Connection may have failed")
-            
+
     # Verify final status
     print("🔍 Verifying connection status...")
     time.sleep(3)  # Give system time to update status
     paired, trusted, connected = check_device_status(mac)
-    
+
     print(f"\n🔎 Final Status:")
     print(f"   Paired:    {paired}")
     print(f"   Trusted:   {trusted}")
     print(f"   Connected: {connected}")
-    
+
     return paired and trusted and connected
 
 
@@ -257,33 +257,33 @@ def connect_gamepad(name, timeout=30):
     if not mac:
         print(f"❌ Gamepad '{name}' not found in config.")
         return False
-        
+
     print(f"🎮 Connecting to gamepad '{name}' ({mac})...")
-    
+
     # Check current status first
     paired, trusted, connected = check_device_status(mac)
-    
+
     if connected:
         print(f"✅ Gamepad '{name}' is already connected!")
         return True
-        
+
     if paired and trusted:
         print(f"ℹ️ Gamepad is paired and trusted, attempting to connect...")
         with BluetoothctlProcess(timeout=timeout) as bt:
             bt.send_command("power on")
             bt.send_command(f"connect {mac}")
             connection_success = bt.wait_for_pairing_success(mac, timeout=timeout)
-            
+
         # Verify final status
         time.sleep(2)
         _, _, connected = check_device_status(mac)
-        
+
         if connected:
             print(f"✅ Successfully connected to {name}.")
             return True
         else:
             print(f"⚠️ Connection failed. Attempting full pairing...")
-            
+
     # If we get here, we need to do a full pairing
     return pair_device(mac, timeout=timeout)
 
@@ -292,14 +292,14 @@ def pick_device(devices):
     """Allow user to pick a device from scanned list."""
     print("\n📡 Found devices:")
     choices = list(devices.items())
-    
+
     if not choices:
         print("❌ No devices found!")
         return None, None
-        
+
     for i, (mac, name) in enumerate(choices):
         print(f"{i + 1}. {name} ({mac})")
-        
+
     try:
         choice = int(input("👉 Enter the number of the device to pair (or 0 to cancel): "))
         if choice == 0:
@@ -310,23 +310,23 @@ def pick_device(devices):
         return None, None
 
 
-def pair_mode(timeout=30):
+def pair_mode(timeout=45):
     """Run interactive pairing flow with proper timeout handling."""
-    devices = discover_devices(scan_time=10)
-    
+    devices = discover_devices()
+
     if not devices:
         print("❌ No devices found. Try again.")
         return False
-        
+
     mac, name = pick_device(devices)
     if not mac:
         return False
-        
+
     success = pair_device(mac, timeout=timeout)
-    
+
     if success:
         print(f"✅ Successfully paired and connected to {name} ({mac})!")
-        
+
         # Ask if user wants to save to config
         save = input("\n💾 Save this gamepad to config.py? (y/n): ").lower().strip()
         if save == 'y':
@@ -339,7 +339,7 @@ def pair_mode(timeout=30):
                 print(f"}}")
     else:
         print(f"❌ Failed to pair with {name} ({mac})")
-        
+
     return success
 
 
@@ -357,9 +357,9 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         usage()
         sys.exit(1)
-        
+
     action = sys.argv[1]
-    
+
     if action == "pair":
         success = pair_mode()
         sys.exit(0 if success else 1)
