@@ -297,8 +297,15 @@ def pick_device(devices):
         print("❌ No devices found!")
         return None, None
 
+    # Create a reverse lookup of MAC addresses to gamepad names from config
+    config_gamepads_by_mac = {mac.upper(): name for name, mac in config.GAMEPADS.items()}
+
     for i, (mac, name) in enumerate(choices):
-        print(f"{i + 1}. {name} ({mac})")
+        # Check if this MAC address is in our config
+        config_name = config_gamepads_by_mac.get(mac.upper(), "")
+        config_info = f" [{config_name}]" if config_name else ""
+
+        print(f"{i + 1}. {name} ({mac}){config_info}")
 
     try:
         choice = int(input("👉 Enter the number of the device to pair (or 0 to cancel): "))
@@ -327,20 +334,57 @@ def pair_mode(timeout=45):
     if success:
         print(f"✅ Successfully paired and connected to {name} ({mac})!")
 
-        # Ask if user wants to save to config
-        save = input("\n💾 Save this gamepad to config.py? (y/n): ").lower().strip()
-        if save == 'y':
-            gamepad_name = input("👉 Enter a name for this gamepad: ").strip()
-            if gamepad_name:
-                print(f"\nTo save this gamepad, add the following to your config.py file:")
-                print(f"\nGAMEPADS = {{")
-                print(f"    # ... your existing gamepads")
-                print(f"    '{gamepad_name}': '{mac}',")
-                print(f"}}")
+        # Check if this device is already in config
+        existing_name = None
+        for name, config_mac in config.GAMEPADS.items():
+            if config_mac.upper() == mac.upper():
+                existing_name = name
+                break
+
+        if existing_name:
+            print(f"\nℹ️ This gamepad is already in your config as '{existing_name}'")
+        else:
+            # Ask if user wants to save to config
+            save = input("\n💾 Save this gamepad to config.py? (y/n): ").lower().strip()
+            if save == 'y':
+                gamepad_name = input("👉 Enter a name for this gamepad: ").strip()
+                if gamepad_name:
+                    print(f"\nTo save this gamepad, add the following to your config.py file:")
+                    print(f"\nGAMEPADS = {{")
+
+                    # Show existing gamepads
+                    for name, config_mac in config.GAMEPADS.items():
+                        print(f"    '{name}': '{config_mac}',")
+
+                    # Show the new gamepad
+                    print(f"    '{gamepad_name}': '{mac}',")
+                    print(f"}}")
     else:
         print(f"❌ Failed to pair with {name} ({mac})")
 
     return success
+
+
+def list_gamepads():
+    """List all gamepads from config with their connection status"""
+    if not config.GAMEPADS:
+        print("❌ No gamepads configured in config.py")
+        return
+
+    print("🎮 Configured gamepads:")
+    print("\nNAME\t\tMAC ADDRESS\t\tSTATUS")
+    print("----\t\t-----------\t\t------")
+
+    for name, mac in config.GAMEPADS.items():
+        paired, trusted, connected = check_device_status(mac)
+
+        status = "✅ Connected" if connected else "❌ Disconnected"
+        if paired and trusted and not connected:
+            status = "⚠️ Paired but not connected"
+        elif not paired and not trusted:
+            status = "❓ Unknown/Not paired"
+
+        print(f"{name}\t\t{mac}\t\t{status}")
 
 
 def usage():
@@ -348,6 +392,7 @@ def usage():
     print("  python improved_bluetooth_manager.py pair")
     print("  python improved_bluetooth_manager.py connect <gamepad_name>")
     print("  python improved_bluetooth_manager.py status <gamepad_name>")
+    print("  python improved_bluetooth_manager.py list")
     print("\nAvailable gamepads:")
     for name in config.GAMEPADS:
         print(f"  - {name}")
@@ -377,6 +422,9 @@ if __name__ == "__main__":
         print(f"   Paired:    {paired}")
         print(f"   Trusted:   {trusted}")
         print(f"   Connected: {connected}")
+        sys.exit(0)
+    elif action == "list":
+        list_gamepads()
         sys.exit(0)
     else:
         usage()
