@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Improved Bluetooth Manager for gamepad pairing
-Handles timeouts and process control more effectively when using bluetoothctl
+Bluetooth Manager for gamepad pairing
+Handles timeouts and process control effectively when using bluetoothctl
 """
 
 import subprocess
@@ -389,10 +389,10 @@ def list_gamepads():
 
 def usage():
     print("Usage:")
-    print("  python improved_bluetooth_manager.py pair")
-    print("  python improved_bluetooth_manager.py connect <gamepad_name>")
-    print("  python improved_bluetooth_manager.py status <gamepad_name>")
-    print("  python improved_bluetooth_manager.py list")
+    print("  python bluetooth_manager.py pair")
+    print("  python bluetooth_manager.py connect <gamepad_name>")
+    print("  python bluetooth_manager.py status <gamepad_name>")
+    print("  python bluetooth_manager.py list")
     print("\nAvailable gamepads:")
     for name in config.GAMEPADS:
         print(f"  - {name}")
