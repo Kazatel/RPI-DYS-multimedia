@@ -140,12 +140,19 @@ def check_host_reachable(host_ip):
     # Try to ping the host
     ping_result = run_command(["ping", "-c", "3", "-W", "2", host_ip])
     if ping_result.returncode != 0:
-        print_error(f"Cannot reach host at {host_ip}")
-        print("Please check that:")
-        print("  1. Your host PC is turned on")
-        print("  2. Both devices are connected to the same network")
-        print("  3. The IP address is correct")
-        return False
+        print_warning(f"Cannot ping host at {host_ip}")
+        print("This could be because:")
+        print("  1. Your host PC is not turned on")
+        print("  2. The devices are not on the same network")
+        print("  3. The IP address is incorrect")
+        print("  4. ICMP (ping) is blocked by a firewall")
+
+        choice = input(f"\n{Colors.BOLD}Do you want to continue anyway? (y/n): {Colors.ENDC}").lower()
+        if choice == 'y':
+            print_warning("Continuing without ping verification. Connection might still work if only ICMP is blocked.")
+            # Continue to port check
+        else:
+            return False
 
     # Try to check if the GameStream ports are open
     try:
