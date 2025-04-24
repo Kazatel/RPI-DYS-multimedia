@@ -154,13 +154,40 @@ def check_device_status(mac):
         return False, False, False
 
 
-def discover_devices(scan_time=10):
+def get_existing_devices():
+    """Get list of already known devices before scanning"""
+    try:
+        output = subprocess.check_output(["bluetoothctl", "devices"], text=True)
+        devices = {}
+        for line in output.splitlines():
+            match = re.search(r"Device ([\w:]+) (.+)", line)
+            if match:
+                mac, name = match.groups()
+                devices[mac] = name
+        return devices
+    except subprocess.CalledProcessError:
+        return {}
+
+
+def discover_devices(scan_time=20):
     """
     Scan for Bluetooth devices with proper timeout handling
     Returns dict of MAC -> Name
     """
     print("🔍 Scanning for Bluetooth devices...")
-    devices = {}
+
+    # Get existing devices before scanning
+    existing_devices = get_existing_devices()
+    if existing_devices:
+        print("📋 Existing known devices before scanning:")
+        for mac, name in existing_devices.items():
+            print(f"  📱 Known: {name} ({mac})")
+
+    # Initialize devices with existing ones
+    devices = existing_devices.copy()
+
+    # Track all lines for post-scan analysis
+    all_output_lines = []
 
     with BluetoothctlProcess(timeout=scan_time+5) as bt:
         # Turn on scanning
@@ -179,6 +206,9 @@ def discover_devices(scan_time=10):
                 if not line:
                     break
 
+                # Save all output for later analysis
+                all_output_lines.append(line)
+
                 # Look for device discoveries
                 match = re.search(r"Device ([\w:]+) (.+)", line)
                 if match:
@@ -186,11 +216,48 @@ def discover_devices(scan_time=10):
                     devices[mac] = name
                     print(f"  📱 Found: {name} ({mac})")
 
+                # Also look for NEW device lines which might not have the Device prefix
+                new_match = re.search(r"\[NEW\].+Device ([\w:]+) (.+)", line)
+                if new_match:
+                    mac, name = new_match.groups()
+                    devices[mac] = name
+                    print(f"  🆕 New device: {name} ({mac})")
+
             # Small sleep to prevent CPU hogging
             time.sleep(0.01)
 
         # Turn off scanning
         bt.send_command("scan off")
+
+    # If no devices found during active scanning, try to extract from the output
+    if not devices:
+        print("⚠️ No devices found during active scanning, analyzing full output...")
+        for line in all_output_lines:
+            # Look for any MAC address patterns
+            mac_match = re.search(r"((?:[0-9A-F]{2}:){5}[0-9A-F]{2})", line, re.IGNORECASE)
+            if mac_match:
+                mac = mac_match.group(1)
+                name = "Unknown Device"
+                # Try to extract a name if possible
+                name_match = re.search(r"Device.+?(?:[0-9A-F]{2}:){5}[0-9A-F]{2}\s+(.+)", line, re.IGNORECASE)
+                if name_match:
+                    name = name_match.group(1)
+                devices[mac] = name
+                print(f"  🔍 Extracted: {name} ({mac})")
+
+    # Get final list of devices after scanning
+    final_devices = get_existing_devices()
+
+    # Add any devices found in final check that weren't in our list
+    for mac, name in final_devices.items():
+        if mac not in devices:
+            devices[mac] = name
+            print(f"  ➕ Added from final check: {name} ({mac})")
+
+    if not devices:
+        print("❌ No devices found after scanning.")
+    else:
+        print(f"✅ Found {len(devices)} device(s) in total.")
 
     return devices
 
