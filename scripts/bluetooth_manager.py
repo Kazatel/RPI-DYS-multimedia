@@ -154,15 +154,13 @@ def check_device_status(mac):
         return False, False, False
 
 
-def discover_devices(scan_time=30):
+def discover_devices(scan_time=10):
     """
     Scan for Bluetooth devices with proper timeout handling
     Returns dict of MAC -> Name
     """
     print("🔍 Scanning for Bluetooth devices...")
     devices = {}
-    last_device_time = 0
-    idle_timeout = 5  # Stop scanning if no new devices found for this many seconds
 
     with BluetoothctlProcess(timeout=scan_time+5) as bt:
         # Turn on scanning
@@ -170,10 +168,8 @@ def discover_devices(scan_time=30):
         bt.send_command("scan on")
 
         # Wait for scan_time seconds
-        print(f"⏳ Scanning for up to {scan_time} seconds...")
-        print(f"   (Will stop early if no new devices found for {idle_timeout} seconds)")
+        print(f"⏳ Scanning for {scan_time} seconds...")
         start_time = time.time()
-        last_device_time = start_time
 
         while time.time() - start_time < scan_time:
             ready, _, _ = select.select([bt.process.stdout], [], [], 0.1)
@@ -184,29 +180,11 @@ def discover_devices(scan_time=30):
                     break
 
                 # Look for device discoveries
-                device_match = re.search(r"Device ([\w:]+) (.+)", line)
-                if device_match:
-                    mac, name = device_match.groups()
-                    if mac not in devices:
-                        # New device found, update last_device_time
-                        last_device_time = time.time()
+                match = re.search(r"Device ([\w:]+) (.+)", line)
+                if match:
+                    mac, name = match.groups()
                     devices[mac] = name
                     print(f"  📱 Found: {name} ({mac})")
-
-                # Also look for Xbox controller specific patterns
-                xbox_match = re.search(r"NEW.+Device ([\w:]+) (Xbox.+Controller|Controller)", line, re.IGNORECASE)
-                if xbox_match:
-                    mac, name = xbox_match.groups()
-                    if mac not in devices:
-                        # New device found, update last_device_time
-                        last_device_time = time.time()
-                    devices[mac] = name
-                    print(f"  🎮 Found Xbox controller: {name} ({mac})")
-
-            # Check if we've been idle too long (no new devices)
-            if devices and time.time() - last_device_time > idle_timeout:
-                print(f"ℹ️ No new devices found for {idle_timeout} seconds, stopping scan early.")
-                break
 
             # Small sleep to prevent CPU hogging
             time.sleep(0.01)
@@ -341,32 +319,10 @@ def pick_device(devices):
 
 def pair_mode(timeout=45):
     """Run interactive pairing flow with proper timeout handling."""
-    print("\n🎮 Xbox Controller Pairing Tips:")
-    print("1. Make sure your controller is charged")
-    print("2. Press and hold the Xbox button until it flashes")
-    print("3. Then press and hold the small connect button on top of the controller")
-    print("4. The Xbox button should flash more rapidly when in pairing mode")
-    print("5. Keep holding the connect button until scanning begins\n")
-
-    input("Press Enter when your controller is ready to pair...")
-
-    # First scan with a shorter timeout to find quickly
-    print("\n🔍 Quick scan for already visible devices...")
-    devices = discover_devices(scan_time=10)
+    devices = discover_devices()
 
     if not devices:
-        print("\n⚠️ No devices found in quick scan. Starting a more thorough scan...")
-        print("👉 Please put your controller in pairing mode NOW if it isn't already")
-        print("   (Press and hold the connect button on top of the controller)")
-
-        # Second scan with longer timeout if first one found nothing
-        devices = discover_devices(scan_time=30)
-
-    if not devices:
-        print("\n❌ No devices found after extended scan.")
-        retry = input("Would you like to try again? (y/n): ").lower().strip()
-        if retry == 'y':
-            return pair_mode(timeout)
+        print("❌ No devices found. Try again.")
         return False
 
     mac, name = pick_device(devices)
@@ -405,9 +361,6 @@ def pair_mode(timeout=45):
                     print(f"}}")
     else:
         print(f"❌ Failed to pair with {name} ({mac})")
-        retry = input("Would you like to try again? (y/n): ").lower().strip()
-        if retry == 'y':
-            return pair_mode(timeout)
 
     return success
 
