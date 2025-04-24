@@ -16,6 +16,9 @@ import select
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import config
 
+# Global variable to track newly found devices
+newly_found_devices = set()
+
 
 class BluetoothctlProcess:
     """Interactive bluetoothctl process wrapper with timeout control"""
@@ -172,7 +175,7 @@ def get_existing_devices():
 def discover_devices(scan_time=20):
     """
     Scan for Bluetooth devices with proper timeout handling
-    Returns dict of MAC -> Name
+    Returns dict of MAC -> Name and a set of newly found devices
     """
     print("🔍 Scanning for Bluetooth devices...")
 
@@ -185,6 +188,9 @@ def discover_devices(scan_time=20):
 
     # Initialize devices with existing ones
     devices = existing_devices.copy()
+
+    # Track newly found devices
+    new_devices = set()
 
     # Track all lines for post-scan analysis
     all_output_lines = []
@@ -213,6 +219,8 @@ def discover_devices(scan_time=20):
                 match = re.search(r"Device ([\w:]+) (.+)", line)
                 if match:
                     mac, name = match.groups()
+                    if mac not in existing_devices:
+                        new_devices.add(mac)
                     devices[mac] = name
                     print(f"  📱 Found: {name} ({mac})")
 
@@ -220,6 +228,8 @@ def discover_devices(scan_time=20):
                 new_match = re.search(r"\[NEW\].+Device ([\w:]+) (.+)", line)
                 if new_match:
                     mac, name = new_match.groups()
+                    if mac not in existing_devices:
+                        new_devices.add(mac)
                     devices[mac] = name
                     print(f"  🆕 New device: {name} ({mac})")
 
@@ -242,6 +252,8 @@ def discover_devices(scan_time=20):
                 name_match = re.search(r"Device.+?(?:[0-9A-F]{2}:){5}[0-9A-F]{2}\s+(.+)", line, re.IGNORECASE)
                 if name_match:
                     name = name_match.group(1)
+                if mac not in existing_devices:
+                    new_devices.add(mac)
                 devices[mac] = name
                 print(f"  🔍 Extracted: {name} ({mac})")
 
@@ -251,6 +263,8 @@ def discover_devices(scan_time=20):
     # Add any devices found in final check that weren't in our list
     for mac, name in final_devices.items():
         if mac not in devices:
+            if mac not in existing_devices:
+                new_devices.add(mac)
             devices[mac] = name
             print(f"  ➕ Added from final check: {name} ({mac})")
 
@@ -258,6 +272,10 @@ def discover_devices(scan_time=20):
         print("❌ No devices found after scanning.")
     else:
         print(f"✅ Found {len(devices)} device(s) in total.")
+
+    # Store new devices in a global variable for pick_device to use
+    global newly_found_devices
+    newly_found_devices = new_devices
 
     return devices
 
@@ -367,16 +385,8 @@ def pick_device(devices):
     # Create a reverse lookup of MAC addresses to gamepad names from config
     config_gamepads_by_mac = {mac.upper(): name for name, mac in config.GAMEPADS.items()}
 
-    # Get the list of previously known devices
-    try:
-        output = subprocess.check_output(["bluetoothctl", "devices"], text=True)
-        known_devices = set()
-        for line in output.splitlines():
-            match = re.search(r"Device ([\w:]+)", line)
-            if match:
-                known_devices.add(match.group(1).upper())
-    except subprocess.CalledProcessError:
-        known_devices = set()
+    # Use the global newly_found_devices set
+    global newly_found_devices
 
     for i, (mac, name) in enumerate(choices):
         # Check if this MAC address is in our config
@@ -384,7 +394,7 @@ def pick_device(devices):
         config_info = f" [{config_name}]" if config_name else ""
 
         # Check if this is a newly found device
-        new_marker = "➕ " if mac.upper() not in known_devices else ""
+        new_marker = "➕ " if mac.upper() in newly_found_devices else ""
 
         print(f"{i + 1}. {new_marker}{name} ({mac}){config_info}")
 
