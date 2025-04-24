@@ -194,8 +194,8 @@ RETROPIE_SOURCE_PATH = "/mnt/retropie/"
 
 
 GAMEPADS = {
-    'white_new': '01:24:11:04:0F:19',
-    'black_new': '01:10:0D:12:51:D6',
+    'white_new': '83:24:11:04:0F:19',
+    'black_new': '83:10:0D:12:51:D6',
     'white_old': '6A:21:21:50:63:25',
     'black_old': 'A7:0E:21:50:63:25',
 }

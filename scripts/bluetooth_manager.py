@@ -154,13 +154,15 @@ def check_device_status(mac):
         return False, False, False
 
 
-def discover_devices(scan_time=20):
+def discover_devices(scan_time=30):
     """
     Scan for Bluetooth devices with proper timeout handling
     Returns dict of MAC -> Name
     """
     print("🔍 Scanning for Bluetooth devices...")
     devices = {}
+    last_device_time = 0
+    idle_timeout = 5  # Stop scanning if no new devices found for this many seconds
 
     with BluetoothctlProcess(timeout=scan_time+5) as bt:
         # Turn on scanning
@@ -168,8 +170,10 @@ def discover_devices(scan_time=20):
         bt.send_command("scan on")
 
         # Wait for scan_time seconds
-        print(f"⏳ Scanning for {scan_time} seconds...")
+        print(f"⏳ Scanning for up to {scan_time} seconds...")
+        print(f"   (Will stop early if no new devices found for {idle_timeout} seconds)")
         start_time = time.time()
+        last_device_time = start_time
 
         while time.time() - start_time < scan_time:
             ready, _, _ = select.select([bt.process.stdout], [], [], 0.1)
@@ -183,8 +187,16 @@ def discover_devices(scan_time=20):
                 match = re.search(r"Device ([\w:]+) (.+)", line)
                 if match:
                     mac, name = match.groups()
+                    if mac not in devices:
+                        # New device found, update last_device_time
+                        last_device_time = time.time()
                     devices[mac] = name
                     print(f"  📱 Found: {name} ({mac})")
+
+            # Check if we've been idle too long (no new devices)
+            if devices and time.time() - last_device_time > idle_timeout:
+                print(f"ℹ️ No new devices found for {idle_timeout} seconds, stopping scan early.")
+                break
 
             # Small sleep to prevent CPU hogging
             time.sleep(0.01)
