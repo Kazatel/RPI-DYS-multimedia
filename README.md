@@ -1,7 +1,5 @@
 ﻿# 🎮 RPi DYS Multimedia Setup
 
-NOTE: Project is unfinished !!!
-
 A fully automated installation and configuration system for setting up a Raspberry Pi as a versatile multimedia center. Designed to be beginner-friendly, customizable, and perfect for retro gaming, streaming, and home entertainment.
 
 ---
@@ -12,20 +10,24 @@ A fully automated installation and configuration system for setting up a Raspber
   - **Kodi** – full media center experience
   - **RetroPie** – retro gaming console with controller support
   - **Moonlight** – game streaming from your PC
+- 🔄 **App switching integration**:
+  - Seamlessly switch between Kodi, RetroPie, and Desktop
+  - Desktop shortcuts and service management
+  - Custom Kodi addon for switching
+- 🎮 **Enhanced controller support**:
+  - Bluetooth gamepad pairing and management
+  - Xbox controller driver options (xpad/xboxdrv)
+  - A/B button swap for RetroPie
 - ⚙️ **System configuration automation**:
-  - Set system locale
+  - Set system locale and boot options
   - Overclock Raspberry Pi 5 (optional)
-- 🎮 **Gamepad pairing automation**
-  - Bluetooth auto-connector based on gamepad name
-- 🛠️ Structured with maintainability in mind:
-  - Separated `modules/` for app installs
-  - `utils/` for shared logic (APT, interaction, OS tools)
-  - `scripts/` for utility helpers like gamepad pairing
+  - Mount external drives automatically
 
 ---
 
 ## 📁 Project Structure
 
+```
 RPi-DYS-Multimedia/
 ├── install.py          # Main script to run system config & app setup
 ├── config.py           # User-defined settings
@@ -33,15 +35,18 @@ RPi-DYS-Multimedia/
 │   ├── kodi_install.py
 │   ├── retropie_install.py
 │   ├── moonlight_install.py
+│   ├── app_switching.py
 │   └── system_configuration.py
 ├── utils/              # Shared utility logic
 │   ├── apt_utils.py
 │   ├── os_utils.py
 │   └── interaction.py
-├── scripts/            # Utility scripts (e.g., for gamepad management)
+├── scripts/            # Utility scripts
 │   └── bluetooth_manager.py
+├── addons/             # Kodi addons
+│   └── script.switcher/
 └── README.md
-
+```
 
 ---
 
@@ -50,88 +55,98 @@ RPi-DYS-Multimedia/
 ### 1. Clone this repo
 
 ```bash
-git clone [https://github.com/yourusername/rpi-dys-multimedia.git](https://github.com/yourusername/rpi-dys-multimedia.git)
+git clone https://github.com/yourusername/rpi-dys-multimedia.git
 cd rpi-dys-multimedia
 ```
-2. Configure your setup
 
-Edit config.py to:
+### 2. Configure your setup
 
-    Enable/disable apps
-    Set overclocking parameters
-    Add custom Kodi repositories
-    Define Bluetooth gamepads
+Edit `config.py` to customize your installation:
+- Enable/disable applications
+- Set overclocking parameters
+- Configure controller options
+- Add custom Kodi repositories
+- Register your Bluetooth gamepads
 
-3. Run the installer
-
-To run everything:
-```bash
-python3 install.py
-```
-To run only system configuration (locale, overclocking, etc.):
+### 3. Run the installer
 
 ```bash
-python3 install.py system
+sudo python install.py
 ```
-To install applications only:
+
+The installer provides a step-by-step menu:
+1. **System Configuration** - locale, boot options, overclocking
+2. **Application Installation** - Kodi, RetroPie, Moonlight
+3. **Post-Install Configuration** - app-specific settings
+4. **App Switching Setup** - integration between applications
+5. **Bluetooth Gamepad Setup** - pair and manage controllers
+6. **Moonlight Streaming Setup** - NVIDIA GameStream configuration
+7. **Advanced Mode** - individual component management
+8. **Exit**
+
+---
+
+## 🎮 Controller Configuration
+
+### Bluetooth Gamepads
+
 ```bash
-python3 install.py apps
+# List paired gamepads
+sudo python install.py bluetooth list
+
+# Pair a new gamepad
+sudo python install.py bluetooth pair
+
+# Connect a specific gamepad
+sudo python install.py bluetooth connect <gamepad_name>
 ```
-⚙️ Configuration Overview
 
-Enable or disable apps
-Python
+### Xbox Controller Options
 
-# config.py
-KODI = True
-RETROPIE = True
-MOONLIGHT = True
+Set in `config.py`:
+```python
+# Options: None, 'xpad', 'xboxdrv'
+GAMEPAD_XBOX_SUPPORT = 'xpad'
 
-Overclocking options
-Python
+# A/B button swap for RetroPie
+RETROPIE_ES_SWAP_A_B = False
+```
 
-# config.py
-BOOT_arm_freq = 2800
-BOOT_gpu_freq = 950
-BOOT_over_voltage_delta = 50000
+---
 
-Add Kodi repositories
-Python
+## 🔄 App Switching
 
-KODI_REPOSITORIES = [
-    {"name": "CDER", "url": "[https://cder.sk/](https://cder.sk/)"}
-]
+The system provides multiple ways to switch between applications:
 
-Register your gamepads
-Python
+- **Desktop shortcuts** - in the applications menu
+- **Kodi addon** - switch directly from within Kodi
+- **RetroPie ports** - launch other apps from RetroPie
+- **Boot selection** - choose which app starts on boot
 
-GAMEPADS = {
-    "my_gamepad": "AA:BB:CC:DD:EE:FF",
-    "backup_controller": "11:22:33:44:55:66"
-}
+Icons for applications are stored in `~/Pictures/icons/`.
 
-🧠 How It Works
+---
 
-    install.py is the main entry point
-    Based on mode, it calls:
-        apply_locale_settings() and apply_overclock_settings() from system_configuration.py
-        Installs selected apps by dynamically loading their modules
-    Utility functions handle all APT package logic, user prompts, and Bluetooth pairing
+## 🧠 How It Works
 
-💡 Tips
+- `install.py` is the main entry point with an interactive menu
+- Each application has its own module in the `modules/` directory
+- App switching integration manages services and shortcuts
+- Bluetooth manager handles controller pairing and connection
+- Configuration options in `config.py` control all aspects of the setup
 
-    Reboot is recommended after running in system mode
-    You can run scripts/bluetooth_manager.py to connect gamepads by name
-    Use AUTOMATIC_VERSION_SELECTION = True in config.py to skip manual version selection
+---
 
-🐍 Requirements
+## 🐍 Requirements
 
-    Python 3.7+
-    Tested on Raspberry Pi OS (Bookworm, Bullseye)
-    Basic packages are installed automatically (e.g., git, lsb-release)
+- Python 3.7+
+- Tested on Raspberry Pi OS (Bookworm)
+- Raspberry Pi 5 recommended for best performance
+- Basic packages are installed automatically
 
-📜 License
+---
+
+## 📜 License
 
 This project is licensed under the MIT License. Do what you want—just don't forget to share back 😄
-🤝 Contributing
 

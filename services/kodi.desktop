@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Start Kodi
+Comment=Switch to Kodi Media Center
+Exec=sudo systemctl start kodi.service
+Icon=/home/${USER}/Pictures/icons/kodi.png
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Player;TV;

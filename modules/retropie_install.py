@@ -165,6 +165,14 @@ def main_install(force=False):
             log.info(f"✅ RetroPie already installed. Version: {version}")
         else:
             log.info("✅ RetroPie already installed.")
+
+        # Even if RetroPie is already installed, we should still apply these configurations
+        # Apply Xbox controller driver if specified
+        if getattr(config, "GAMEPAD_XBOX_SUPPORT", None):
+            install_xbox_controller_driver()
+
+        # Apply A/B button swap configuration
+        configure_button_swap()
         return
 
     install_prerequisites()
@@ -172,8 +180,146 @@ def main_install(force=False):
     run_setup_script()
 
 
+def install_xbox_controller_driver():
+    """
+    Install and configure the selected Xbox controller driver based on config settings
+    """
+    driver = getattr(config, "GAMEPAD_XBOX_SUPPORT", None)
+
+    if not driver:
+        log.info("ℹ️ No Xbox controller driver specified in config. Using default kernel drivers.")
+        return
+
+    log.info(f"🎮 Installing Xbox controller driver: {driver}")
+
+    if driver.lower() == 'xpad':
+        # Install and configure xpad driver (kernel module)
+        try:
+            # Check if xpad module is already loaded
+            result = run_command(["lsmod | grep xpad"], use_bash_wrapper=True)
+            if "xpad" in result.stdout:
+                log.info("✅ xpad driver is already loaded.")
+            else:
+                # Install dkms if needed
+                handle_package_install("dkms", auto_update_packages=True)
+
+                # Install xpad driver
+                log.info("📦 Installing xpad driver...")
+                run_command(["modprobe", "xpad"])
+
+                # Add xpad to /etc/modules to load at boot
+                if not os.path.exists("/etc/modules-load.d/xpad.conf"):
+                    with open("/etc/modules-load.d/xpad.conf", "w") as f:
+                        f.write("xpad\n")
+                    log.info("✅ Added xpad to load at boot.")
+
+            log.info("✅ xpad driver setup completed.")
+            return True
+        except Exception as e:
+            log.error(f"❌ Failed to install xpad driver: {e}")
+            return False
+
+    elif driver.lower() == 'xboxdrv':
+        # Install and configure xboxdrv (userspace driver)
+        try:
+            # Install xboxdrv package
+            log.info("📦 Installing xboxdrv package...")
+            success = handle_package_install("xboxdrv", auto_update_packages=True)
+
+            if not success:
+                log.error("❌ Failed to install xboxdrv package.")
+                return False
+
+            # Create a systemd service to start xboxdrv at boot
+            service_content = """[Unit]
+Description=Xbox controller driver daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/xboxdrv --daemon --detach --dbus disabled --silent
+Type=forking
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+            with open("/etc/systemd/system/xboxdrv.service", "w") as f:
+                f.write(service_content)
+
+            # Enable and start the service
+            run_command(["systemctl", "daemon-reload"])
+            run_command(["systemctl", "enable", "xboxdrv.service"])
+            run_command(["systemctl", "start", "xboxdrv.service"])
+
+            log.info("✅ xboxdrv driver setup completed.")
+            return True
+        except Exception as e:
+            log.error(f"❌ Failed to install xboxdrv driver: {e}")
+            return False
+    else:
+        log.error(f"❌ Unknown Xbox controller driver specified: {driver}")
+        log.info("Valid options are: 'xpad', 'xboxdrv'")
+        return False
+
+
+def configure_button_swap():
+    """
+    Configure A/B button swap in EmulationStation and RetroArch based on config settings
+    """
+    swap_a_b = getattr(config, "RETROPIE_ES_SWAP_A_B", False)
+
+    # Path to the autoconf.cfg file
+    autoconf_path = "/opt/retropie/configs/all/autoconf.cfg"
+
+    if not os.path.exists(os.path.dirname(autoconf_path)):
+        log.warning(f"⚠️ RetroPie config directory not found at {os.path.dirname(autoconf_path)}")
+        return False
+
+    log.info(f"🎮 Configuring A/B button swap: {'Enabled' if swap_a_b else 'Disabled'}")
+
+    # Convert boolean to the numeric string value expected by RetroPie
+    # True -> "1", False -> "0"
+    swap_value = "1" if swap_a_b else "0"
+
+    # Check if the file exists
+    if os.path.exists(autoconf_path):
+        # Read the current content
+        with open(autoconf_path, "r") as f:
+            content = f.readlines()
+
+        # Look for the es_swap_a_b line
+        swap_line_found = False
+        new_content = []
+
+        for line in content:
+            if line.strip().startswith("es_swap_a_b"):
+                # Replace the line with the numeric value
+                new_content.append(f"es_swap_a_b = {swap_value}\n")
+                swap_line_found = True
+            else:
+                new_content.append(line)
+
+        # If the line wasn't found, add it
+        if not swap_line_found:
+            new_content.append(f"es_swap_a_b = {swap_value}\n")
+
+        # Write the updated content
+        with open(autoconf_path, "w") as f:
+            f.writelines(new_content)
+    else:
+        # Create the file with the setting
+        with open(autoconf_path, "w") as f:
+            f.write(f"es_swap_a_b = {swap_value}\n")
+
+    log.info(f"✅ A/B button swap configuration {'enabled' if swap_a_b else 'disabled'} in {autoconf_path}")
+    return True
+
+
 def main_configure():
     sync_retropie_directories()
+    install_xbox_controller_driver()
+    configure_button_swap()
 
 
 if __name__ == "__main__":

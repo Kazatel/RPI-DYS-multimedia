@@ -60,7 +60,7 @@ BOOT_arm_freq_min = 1500
 BOOT_v3d_freq_min = 500
 
 # ------------------------------------------------------------------------------------
-# ⚡ LEGACY VOLTAGE OPTIONS (for Pi 1 / Pi 2 / Pi 3)  
+# ⚡ LEGACY VOLTAGE OPTIONS (for Pi 1 / Pi 2 / Pi 3)
 # [source:https://github.com/raspberrypi/documentation/blob/develop/documentation/asciidoc/computers/config_txt/overclocking.adoc]
 # ------------------------------------------------------------------------------------
 # Uncomment these if you're experimenting with older models that don't support newer over_voltage_delta settings
@@ -75,7 +75,7 @@ BOOT_v3d_freq_min = 500
 
 
 """
-DEFAULT FREQUENCIES BY MODEL (MHz) 
+DEFAULT FREQUENCIES BY MODEL (MHz)
 [Source:https://github.com/raspberrypi/documentation/blob/develop/documentation/asciidoc/computers/config_txt/overclocking.adoc]
 ------------------------------------------------------------------------------------------------------------------------------------
 | Option           | Pi 0/W | Pi1  | Pi2  | Pi3  | Pi3A+/Pi3B+ | CM4 & Pi4B <= R1.3 | Pi4B R1.4     | Pi 400 | Pi Zero 2 W  | Pi 5  |
@@ -130,17 +130,38 @@ DISKS = [
 APPLICATIONS = {
     "kodi": {
         "enabled": True,
-        "user": "root" 
+        "user": USER,
+        "type": "GUI",
+        "service_name": "kodi.service",
+        "exec_command": "/usr/bin/kodi-standalone",
+        "display_name": "Kodi Media Center"
     },
     "retropie": {
         "enabled": True,
-        "user": USER  # ✅ this should *not* be root
+        "user": USER,  # ✅ this should *not* be root
+        "type": "GUI",
+        "service_name": "retropie.service",
+        "exec_command": "/opt/retropie/supplementary/emulationstation/emulationstation",
+        "display_name": "RetroPie"
+    },
+    "desktop": {
+        "enabled": True,
+        "user": USER,
+        "type": "GUI",
+        "service_name": "desktop.service",
+        "exec_command": "/usr/bin/startx",
+        "display_name": "Desktop Environment"
     },
     "moonlight": {
         "enabled": True,
-        "user": "root"
+        "user": USER,
+        "type": "SERVICE",  # Not a GUI app that needs exclusive display access
+        "display_name": "Moonlight Streaming"
     }
 }
+
+# Default app to boot into (must be one of the enabled apps with type "GUI")
+DEFAULT_BOOT_APP = "kodi"
 
 
 # ------------------------------------------------------------------------------------
@@ -177,6 +198,15 @@ GAMEPADS = {
     'black_new': '01:10:0D:12:51:D6',
     'white_old': '6A:21:21:50:63:25',
     'black_old': 'A7:0E:21:50:63:25',
-    
-    
 }
+
+# Xbox controller driver support
+# Options: None, 'xpad', 'xboxdrv'
+# - None: Use default kernel drivers
+# - 'xpad': Use the xpad driver (kernel module)
+# - 'xboxdrv': Use the xboxdrv userspace driver
+GAMEPAD_XBOX_SUPPORT = 'xpad'
+
+# Swap A/B buttons in EmulationStation and RetroArch
+# Set to True to swap A/B buttons (useful for Nintendo-style controllers) Default: False
+RETROPIE_ES_SWAP_A_B = True

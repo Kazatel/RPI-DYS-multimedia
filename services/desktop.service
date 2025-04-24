@@ -1,0 +1,16 @@
+[Unit]
+Description=Desktop Environment
+After=network.target
+Conflicts=kodi.service retropie.service
+
+[Service]
+User=${USER}
+Group=${USER}
+Type=simple
+# This starts the default X session for the pi user
+ExecStart=/usr/bin/startx
+Restart=on-abort
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

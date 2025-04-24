@@ -79,7 +79,7 @@ def install_selected_apps(force_apps=None):
                 module = importlib.import_module(module_path)
 
                 print(f"\n🚀 Starting installation for: {app_name.upper()} (user: {user})")
-                
+
                 if hasattr(module, "main_install"):
                     module.main_install()
                 else:
@@ -122,15 +122,79 @@ def print_main_menu():
     print("   - 🔄 Run installed apps once before next step")
     print("3) 🔧 Post-Install Configuration")
     print("   - Symlinks BIOS/ROMs, applies tweaks")
-    print("4) ⚙️  Advanced Mode")
+    print("4) 🔄 App Switching Setup")
+    print("   - Configure switching between GUI applications")
+    print("   - Sets up desktop shortcuts and boot options")
+    print("5) 🎮 Bluetooth Gamepad Setup")
+    print("   - Pair, connect, and manage Bluetooth gamepads")
+    print("6) 🎮 Moonlight Streaming Setup")
+    print("   - Configure Moonlight for NVIDIA GameStream")
+    print("7) ⚙️  Advanced Mode")
     print("   - Run individual steps manually (no validation)")
-    print("5) ❌ Exit")
+    print("8) ❌ Exit")
+
+
+def setup_app_switching():
+    """Set up app switching between GUI applications"""
+    try:
+        from modules import app_switching
+        app_switching.main_install()
+    except ImportError as e:
+        print(f"❌ Failed to import app_switching module: {e}")
+        return False
+    return True
+
+
+def setup_bluetooth():
+    """Set up Bluetooth gamepads"""
+    try:
+        import subprocess
+        print("\n=== Bluetooth Gamepad Setup ===")
+        print("1) List paired gamepads")
+        print("2) Pair new gamepad")
+        print("3) Connect gamepad")
+        print("4) Check gamepad status")
+        print("0) 🔙 Back to Main Menu")
+
+        choice = input("\nEnter your choice: ").strip()
+        if choice == "1":
+            subprocess.run(["python", "scripts/bluetooth_manager.py", "list"])
+        elif choice == "2":
+            subprocess.run(["python", "scripts/bluetooth_manager.py", "pair"])
+        elif choice == "3":
+            gamepad = input("👉 Enter gamepad name: ").strip()
+            if gamepad:
+                subprocess.run(["python", "scripts/bluetooth_manager.py", "connect", gamepad])
+        elif choice == "4":
+            gamepad = input("👉 Enter gamepad name: ").strip()
+            if gamepad:
+                subprocess.run(["python", "scripts/bluetooth_manager.py", "status", gamepad])
+        elif choice == "0":
+            return
+        else:
+            print("❌ Invalid option.")
+    except Exception as e:
+        print(f"❌ Error during Bluetooth setup: {e}")
+        return False
+    return True
+
+
+def setup_moonlight():
+    """Set up Moonlight streaming"""
+    try:
+        from modules import moonlight_install
+        moonlight_install.main_install()
+        moonlight_install.main_configure()
+    except ImportError as e:
+        print(f"❌ Failed to import moonlight_install module: {e}")
+        return False
+    return True
 
 
 def main_menu_loop():
     while True:
         print_main_menu()
-        choice = input("\nEnter your choice (1-5): ").strip()
+        choice = input("\nEnter your choice (1-8): ").strip()
         if choice == "1":
             system_setup()
         elif choice == "2":
@@ -138,12 +202,18 @@ def main_menu_loop():
         elif choice == "3":
             configure_selected_apps()
         elif choice == "4":
-            advanced_menu_loop()
+            setup_app_switching()
         elif choice == "5":
+            setup_bluetooth()
+        elif choice == "6":
+            setup_moonlight()
+        elif choice == "7":
+            advanced_menu_loop()
+        elif choice == "8":
             print("👋 Exiting installer.")
             sys.exit(0)
         else:
-            print("❌ Invalid option. Please choose 1–5.")
+            print("❌ Invalid option. Please choose 1–8.")
 
 
 def advanced_menu_loop():
@@ -156,18 +226,21 @@ def advanced_menu_loop():
         print("5) Install Kodi")
         print("6) Install RetroPie")
         print("7) Install Moonlight")
-        print("8) Run RetroPie post-config")
+        print("8) Configure applications")
+        print("9) Set up app switching")
+        print("10) Bluetooth gamepad setup")
+        print("11) Moonlight streaming setup")
         print("0) 🔙 Back to Main Menu")
 
         choice = input("\nEnter your choice: ").strip()
         if choice == "1":
-            apply_locale_settings(log)
+            apply_locale_settings()
         elif choice == "2":
-            update_fstab_with_disks(log)
+            update_fstab_with_disks()
         elif choice == "3":
-            apply_boot_config(log)
+            apply_boot_config()
         elif choice == "4":
-            create_or_overwrite_bash_aliases(log)
+            create_or_overwrite_bash_aliases()
         elif choice == "5":
             install_selected_apps(force_apps=["kodi"])
         elif choice == "6":
@@ -176,6 +249,12 @@ def advanced_menu_loop():
             install_selected_apps(force_apps=["moonlight"])
         elif choice == "8":
             configure_selected_apps()
+        elif choice == "9":
+            setup_app_switching()
+        elif choice == "10":
+            setup_bluetooth()
+        elif choice == "11":
+            setup_moonlight()
         elif choice == "0":
             return
         else:

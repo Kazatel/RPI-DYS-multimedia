@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="script.switcher" name="App Switcher" version="1.0.0" provider-name="RPi-DYS-Multimedia">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+    </requires>
+    <extension point="xbmc.python.script" library="main.py">
+        <provides>executable</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <platform>linux</platform>
+        <summary lang="en_GB">Switch between applications</summary>
+        <description lang="en_GB">Allows switching between Kodi, RetroPie, and Desktop Environment</description>
+        <license>GPL-2.0-or-later</license>
+        <assets>
+            <icon>resources/icon.png</icon>
+        </assets>
+    </extension>
+</addon>

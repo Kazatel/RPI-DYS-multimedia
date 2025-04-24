@@ -1,0 +1,15 @@
+[Unit]
+Description=RetroPie Emulation Platform
+After=network.target
+Conflicts=kodi.service desktop.service
+
+[Service]
+User=${USER}
+Group=${USER}
+Type=simple
+ExecStart=/opt/retropie/supplementary/emulationstation/emulationstation
+Restart=on-abort
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
