@@ -367,12 +367,26 @@ def pick_device(devices):
     # Create a reverse lookup of MAC addresses to gamepad names from config
     config_gamepads_by_mac = {mac.upper(): name for name, mac in config.GAMEPADS.items()}
 
+    # Get the list of previously known devices
+    try:
+        output = subprocess.check_output(["bluetoothctl", "devices"], text=True)
+        known_devices = set()
+        for line in output.splitlines():
+            match = re.search(r"Device ([\w:]+)", line)
+            if match:
+                known_devices.add(match.group(1).upper())
+    except subprocess.CalledProcessError:
+        known_devices = set()
+
     for i, (mac, name) in enumerate(choices):
         # Check if this MAC address is in our config
         config_name = config_gamepads_by_mac.get(mac.upper(), "")
         config_info = f" [{config_name}]" if config_name else ""
 
-        print(f"{i + 1}. {name} ({mac}){config_info}")
+        # Check if this is a newly found device
+        new_marker = "➕ " if mac.upper() not in known_devices else ""
+
+        print(f"{i + 1}. {new_marker}{name} ({mac}){config_info}")
 
     try:
         choice = int(input("👉 Enter the number of the device to pair (or 0 to cancel): "))
