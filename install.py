@@ -1,6 +1,14 @@
-﻿import importlib
+﻿#!/usr/bin/env python3
+"""
+RPi-DYS-Multimedia Setup
+A comprehensive installer for Raspberry Pi multimedia center
+"""
+
+import argparse
+import importlib
 import sys
 import os
+import subprocess
 import config
 from utils.logger import logger_instance as log
 from utils.os_utils import (
@@ -15,6 +23,13 @@ from modules.system_configuration import (
     create_or_overwrite_bash_aliases
 )
 from modules.fstab_configurator import update_fstab_with_disks
+
+# Import config validation if available
+try:
+    from utils.config_validator import validate_config
+    CONFIG_VALIDATION_AVAILABLE = True
+except ImportError:
+    CONFIG_VALIDATION_AVAILABLE = False
 
 
 # --- PRECHECK ---
@@ -148,7 +163,16 @@ def setup_app_switching():
 def setup_bluetooth():
     """Set up Bluetooth gamepads"""
     try:
-        import subprocess
+        bluetooth_submenu()
+        return True
+    except Exception as e:
+        print(f"❌ Error during Bluetooth setup: {e}")
+        return False
+
+
+def bluetooth_submenu():
+    """Interactive Bluetooth submenu"""
+    while True:
         print("\n=== Bluetooth Gamepad Setup ===")
         print("1) List paired gamepads")
         print("2) Pair new gamepad")
@@ -158,7 +182,17 @@ def setup_bluetooth():
 
         choice = input("\nEnter your choice: ").strip()
         if choice == "1":
-            subprocess.run(["python", "scripts/bluetooth_manager.py", "list"])
+            result = subprocess.run(["python", "scripts/bluetooth_manager.py", "list"], capture_output=True, text=True)
+            print(result.stdout)
+
+            # After listing, ask if user wants to pair or connect
+            follow_up = input("\n👉 Do you want to (p)air a new device, (c)onnect an existing one, or (q)uit? ").lower().strip()
+            if follow_up.startswith('p'):
+                subprocess.run(["python", "scripts/bluetooth_manager.py", "pair"])
+            elif follow_up.startswith('c'):
+                gamepad_name = input("👉 Enter the name of the gamepad to connect: ").strip()
+                if gamepad_name:
+                    subprocess.run(["python", "scripts/bluetooth_manager.py", "connect", gamepad_name])
         elif choice == "2":
             subprocess.run(["python", "scripts/bluetooth_manager.py", "pair"])
         elif choice == "3":
@@ -173,22 +207,78 @@ def setup_bluetooth():
             return
         else:
             print("❌ Invalid option.")
-    except Exception as e:
-        print(f"❌ Error during Bluetooth setup: {e}")
-        return False
-    return True
 
 
 def setup_moonlight():
     """Set up Moonlight streaming"""
     try:
-        from modules import moonlight_install
-        moonlight_install.main_install()
-        moonlight_install.main_configure()
-    except ImportError as e:
-        print(f"❌ Failed to import moonlight_install module: {e}")
+        moonlight_submenu()
+        return True
+    except Exception as e:
+        print(f"❌ Error during Moonlight setup: {e}")
         return False
-    return True
+
+
+def moonlight_submenu():
+    """Interactive Moonlight submenu"""
+    while True:
+        print("\n=== Moonlight Streaming Setup ===")
+        print("1) Install/Update Moonlight")
+        print("2) Configure Moonlight")
+        print("3) Launch Moonlight GUI")
+        print("4) List paired PCs")
+        print("5) Stream from a paired PC")
+        print("0) 🔙 Back to Main Menu")
+
+        choice = input("\nEnter your choice: ").strip()
+        if choice == "1":
+            try:
+                from modules import moonlight_install
+                moonlight_install.main_install()
+                print("✅ Moonlight installation completed.")
+            except ImportError as e:
+                print(f"❌ Failed to import moonlight_install module: {e}")
+            except Exception as e:
+                print(f"❌ Error during Moonlight installation: {e}")
+        elif choice == "2":
+            try:
+                from modules import moonlight_install
+                moonlight_install.main_configure()
+                print("✅ Moonlight configuration completed.")
+            except ImportError as e:
+                print(f"❌ Failed to import moonlight_install module: {e}")
+            except Exception as e:
+                print(f"❌ Error during Moonlight configuration: {e}")
+        elif choice == "3":
+            try:
+                subprocess.run(["moonlight-qt"], check=True)
+            except subprocess.CalledProcessError as e:
+                print(f"❌ Failed to launch Moonlight GUI: {e}")
+            except FileNotFoundError:
+                print("❌ Moonlight is not installed. Run the installation first.")
+        elif choice == "4":
+            try:
+                subprocess.run(["moonlight-qt", "list"], check=True)
+                input("\nPress Enter to continue...")
+            except subprocess.CalledProcessError as e:
+                print(f"❌ Failed to list paired PCs: {e}")
+            except FileNotFoundError:
+                print("❌ Moonlight is not installed. Run the installation first.")
+        elif choice == "5":
+            host = input("👉 Enter the host PC name or IP: ").strip()
+            if host:
+                app = input("👉 Enter the app name to stream (or 'Desktop'): ").strip()
+                if app:
+                    try:
+                        subprocess.run(["moonlight-qt", "stream", host, app], check=True)
+                    except subprocess.CalledProcessError as e:
+                        print(f"❌ Failed to stream: {e}")
+                    except FileNotFoundError:
+                        print("❌ Moonlight is not installed. Run the installation first.")
+        elif choice == "0":
+            return
+        else:
+            print("❌ Invalid option.")
 
 
 def main_menu_loop():
@@ -261,5 +351,112 @@ def advanced_menu_loop():
             print("❌ Invalid option.")
 
 
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="Raspberry Pi DYS Multimedia Setup",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  sudo python install.py                     # Run in interactive mode
+  sudo python install.py system              # Run system configuration
+  sudo python install.py apps                # Install all enabled applications
+  sudo python install.py apps --app=kodi     # Install only Kodi
+  sudo python install.py config              # Configure all enabled applications
+  sudo python install.py app-switching       # Set up app switching
+  sudo python install.py bluetooth pair      # Run Bluetooth pairing mode
+  sudo python install.py moonlight           # Set up Moonlight streaming
+        """
+    )
+
+    # Add subparsers for different modes
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # System configuration
+    subparsers.add_parser("system", help="Run system configuration")
+
+    # App installation
+    apps_parser = subparsers.add_parser("apps", help="Install applications")
+    apps_parser.add_argument("--app", choices=["kodi", "retropie", "moonlight"],
+                          help="Specific app to install (default: all enabled)")
+
+    # Configuration
+    config_parser = subparsers.add_parser("config", help="Configure applications")
+    config_parser.add_argument("--app", choices=["kodi", "retropie", "moonlight"],
+                            help="Specific app to configure (default: all enabled)")
+
+    # App switching
+    subparsers.add_parser("app-switching", help="Set up app switching")
+
+    # Bluetooth
+    bluetooth_parser = subparsers.add_parser("bluetooth", help="Manage Bluetooth gamepads")
+    bluetooth_parser.add_argument("action", choices=["list", "pair", "connect", "status"],
+                               help="Bluetooth action to perform")
+    bluetooth_parser.add_argument("gamepad", nargs="?", help="Gamepad name (for connect/status)")
+
+    # Moonlight
+    subparsers.add_parser("moonlight", help="Set up Moonlight streaming")
+
+    # Validate
+    if CONFIG_VALIDATION_AVAILABLE:
+        subparsers.add_parser("validate", help="Validate configuration")
+
+    # Interactive mode (default)
+    subparsers.add_parser("interactive", help="Run in interactive mode")
+
+    return parser.parse_args()
+
+
+def main():
+    """Main entry point"""
+    # Parse command line arguments
+    args = parse_args()
+
+    # Validate configuration if available
+    if CONFIG_VALIDATION_AVAILABLE:
+        try:
+            validate_config(config)
+            if args.command == "validate":
+                print("✅ Configuration validation passed.")
+                sys.exit(0)
+        except Exception as e:
+            print(f"❌ Configuration validation failed: {e}")
+            if args.command == "validate":
+                sys.exit(1)
+            print("⚠️ Continuing despite validation errors...")
+
+    # Process commands
+    if args.command == "system":
+        system_setup()
+    elif args.command == "apps":
+        if hasattr(args, 'app') and args.app:
+            install_selected_apps(force_apps=[args.app])
+        else:
+            install_selected_apps()
+    elif args.command == "config":
+        if hasattr(args, 'app') and args.app:
+            configure_selected_apps(force_apps=[args.app])
+        else:
+            configure_selected_apps()
+    elif args.command == "app-switching":
+        setup_app_switching()
+    elif args.command == "bluetooth":
+        if args.action == "list":
+            subprocess.run(["python", "scripts/bluetooth_manager.py", "list"])
+        elif args.action == "pair":
+            subprocess.run(["python", "scripts/bluetooth_manager.py", "pair"])
+        elif args.action == "connect" and args.gamepad:
+            subprocess.run(["python", "scripts/bluetooth_manager.py", "connect", args.gamepad])
+        elif args.action == "status" and args.gamepad:
+            subprocess.run(["python", "scripts/bluetooth_manager.py", "status", args.gamepad])
+        else:
+            setup_bluetooth()
+    elif args.command == "moonlight":
+        setup_moonlight()
+    else:
+        # Default to interactive mode
+        main_menu_loop()
+
+
 if __name__ == "__main__":
-    main_menu_loop()
+    main()
