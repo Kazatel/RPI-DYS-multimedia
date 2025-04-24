@@ -11,6 +11,67 @@ from utils.logger import logger_instance as log
 from utils.error_handler import handle_error
 
 @handle_error(exit_on_error=False)
+def install_kodi_addon():
+    """
+    Install the Kodi app switcher addon
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    with log.log_section("Installing Kodi Addon"):
+        # Check if Kodi is enabled
+        if not config.APPLICATIONS.get("kodi", {}).get("enabled", False):
+            log.info("Kodi is not enabled, skipping addon installation")
+            return True
+
+        user = config.USER
+
+        # Get the addon source directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.dirname(script_dir)
+        addon_source_dir = os.path.join(project_dir, "addons", "script.switcher")
+
+        if not os.path.exists(addon_source_dir):
+            log.error(f"Kodi addon source directory not found at {addon_source_dir}")
+            return False
+
+        # Determine Kodi addon directory
+        kodi_addon_dir = f"/home/{user}/.kodi/addons/script.switcher"
+        kodi_userdata_dir = f"/home/{user}/.kodi/userdata"
+
+        # Create Kodi addon directory if it doesn't exist
+        os.makedirs(os.path.dirname(kodi_addon_dir), exist_ok=True)
+
+        # Remove existing addon directory if it exists
+        if os.path.exists(kodi_addon_dir):
+            log.info(f"Removing existing Kodi addon at {kodi_addon_dir}")
+            try:
+                shutil.rmtree(kodi_addon_dir)
+            except Exception as e:
+                log.error(f"Failed to remove existing Kodi addon: {e}")
+                return False
+
+        # Copy the addon to Kodi's addon directory
+        try:
+            log.info(f"Copying Kodi addon to {kodi_addon_dir}")
+            shutil.copytree(addon_source_dir, kodi_addon_dir)
+
+            # Set proper ownership
+            subprocess.run(["chown", "-R", f"{user}:{user}", kodi_addon_dir], check=True)
+            log.info("✅ Kodi addon installed successfully")
+
+            # Enable the addon in Kodi's addon database
+            # This is done by creating/updating the addon_data directory
+            addon_data_dir = f"{kodi_userdata_dir}/addon_data/script.switcher"
+            os.makedirs(addon_data_dir, exist_ok=True)
+            subprocess.run(["chown", "-R", f"{user}:{user}", addon_data_dir], check=True)
+
+            return True
+        except Exception as e:
+            log.error(f"Failed to install Kodi addon: {e}")
+            return False
+
+
 def setup_app_switching(autostart=None):
     """
     Set up app switching between GUI applications
@@ -53,6 +114,10 @@ def setup_app_switching(autostart=None):
         # Integrate with RetroPie if it's enabled
         if "retropie" in gui_apps:
             integrate_with_retropie(gui_apps)
+
+        # Install Kodi addon if Kodi is enabled
+        if "kodi" in gui_apps:
+            install_kodi_addon()
 
         # Configure autostart
         if not configure_autostart(gui_apps, autostart):
@@ -309,11 +374,17 @@ def app_switching_submenu():
             current_boot_app = next(iter(gui_apps.keys()))
 
         print("1) Set up app switching")
+
+        # Check if Kodi is enabled
+        if "kodi" in gui_apps:
+            print("2) Install Kodi switcher addon")
+
         print("\nSet boot application:")
 
         # Create menu options for each GUI app
         app_options = {}
-        for i, (app_name, app_config) in enumerate(gui_apps.items(), 2):
+        start_index = 3  # Start after the fixed options
+        for i, (app_name, app_config) in enumerate(gui_apps.items(), start_index):
             display_name = app_config.get("display_name", app_name)
             boot_indicator = " (current boot app)" if app_name == current_boot_app else ""
             print(f"{i}) Set {display_name} to start on boot{boot_indicator}")
@@ -330,6 +401,12 @@ def app_switching_submenu():
                 print(f"❌ Invalid option. Using default ({current_boot_app}).")
                 autostart = current_boot_app
             setup_app_switching(autostart)
+        elif choice == "2" and "kodi" in gui_apps:
+            print("Installing Kodi switcher addon...")
+            if install_kodi_addon():
+                print("✅ Kodi addon installed successfully")
+            else:
+                print("❌ Failed to install Kodi addon")
         elif choice in app_options:
             app_name = app_options[choice]
             setup_app_switching(app_name)
