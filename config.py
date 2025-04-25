@@ -112,6 +112,7 @@ LOCALE_ALL = "en_US.UTF-8"
 BASH_ALIASES = """
 alias ll='ls -l'
 alias la='ls -a'
+alias lah='ls -lah'
 alias l='ls -CF'
 """
 

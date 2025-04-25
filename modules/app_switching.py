@@ -35,12 +35,26 @@ def install_kodi_addon():
             log.error(f"Kodi addon source directory not found at {addon_source_dir}")
             return False
 
-        # Determine Kodi addon directory
-        kodi_addon_dir = f"/home/{user}/.kodi/addons/script.switcher"
-        kodi_userdata_dir = f"/home/{user}/.kodi/userdata"
+        # Determine Kodi directories
+        kodi_dir = f"/home/{user}/.kodi"
+        kodi_addon_dir = f"{kodi_dir}/addons/script.switcher"
+        kodi_userdata_dir = f"{kodi_dir}/userdata"
 
-        # Create Kodi addon directory if it doesn't exist
-        os.makedirs(os.path.dirname(kodi_addon_dir), exist_ok=True)
+        # Check if the main Kodi directory exists
+        if not os.path.exists(kodi_dir):
+            log.warning(f"⚠️ Kodi directory not found at {kodi_dir}. Creating it with proper ownership.")
+            # Create the main Kodi directory and essential subdirectories
+            for subdir in ["", "addons", "userdata", "media", "system", "temp"]:
+                dir_path = os.path.join(kodi_dir, subdir)
+                os.makedirs(dir_path, exist_ok=True)
+                # Set proper ownership immediately
+                subprocess.run(["chown", f"{user}:{user}", dir_path], check=True)
+            log.info(f"✅ Created Kodi directory structure with proper ownership")
+        else:
+            # Just ensure the addon directory exists
+            os.makedirs(os.path.dirname(kodi_addon_dir), exist_ok=True)
+            # Make sure it has proper ownership
+            subprocess.run(["chown", f"{user}:{user}", os.path.dirname(kodi_addon_dir)], check=True)
 
         # Remove existing addon directory if it exists
         if os.path.exists(kodi_addon_dir):

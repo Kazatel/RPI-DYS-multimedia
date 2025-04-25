@@ -1,9 +1,11 @@
 ﻿import os
+import subprocess
 import config
 from utils.xml_utils import insert_xml_if_missing
 from utils.apt_utils import handle_package_install, check_package_installed
 from utils.logger import logger_instance as log
 from utils.interaction import ask_user_choice
+from utils.command_utils import run_command
 
 PACKAGE_NAME = "kodi"
 
@@ -85,8 +87,54 @@ def is_kodi_installed():
     """
     return check_package_installed(PACKAGE_NAME)
 
+def ensure_kodi_directories():
+    """
+    Ensures that Kodi directories exist with proper ownership
+    """
+    user = config.USER
+    kodi_dir = f"/home/{user}/.kodi"
+
+    # Check if the main Kodi directory exists
+    if not os.path.exists(kodi_dir):
+        log.info(f"📁 Creating Kodi directory structure at {kodi_dir}")
+        # Create the main Kodi directory and essential subdirectories
+        for subdir in ["", "addons", "userdata", "media", "system", "temp"]:
+            dir_path = os.path.join(kodi_dir, subdir)
+            os.makedirs(dir_path, exist_ok=True)
+            # Set proper ownership immediately
+            try:
+                subprocess.run(["chown", f"{user}:{user}", dir_path], check=True)
+            except Exception as e:
+                log.error(f"❌ Failed to set ownership for {dir_path}: {e}")
+        log.info(f"✅ Created Kodi directory structure with proper ownership")
+    else:
+        # Check ownership of existing directories
+        try:
+            # Get the owner of the .kodi directory
+            stat_info = os.stat(kodi_dir)
+            dir_uid = stat_info.st_uid
+            dir_gid = stat_info.st_gid
+
+            # Get the user's uid/gid
+            import pwd
+            user_info = pwd.getpwnam(user)
+            user_uid = user_info.pw_uid
+            user_gid = user_info.pw_gid
+
+            # If ownership is wrong, fix it
+            if dir_uid != user_uid or dir_gid != user_gid:
+                log.warning(f"⚠️ Kodi directory has incorrect ownership. Fixing...")
+                subprocess.run(["chown", "-R", f"{user}:{user}", kodi_dir], check=True)
+                log.info(f"✅ Fixed Kodi directory ownership")
+        except Exception as e:
+            log.error(f"❌ Failed to check/fix Kodi directory ownership: {e}")
+
+
 def launch_and_kill_kodi():
     try:
+        # Ensure Kodi directories exist with proper ownership
+        ensure_kodi_directories()
+
         command = "(kodi & sleep 10 && killall kodi.bin)"
         return_code = run_command(
             command,
@@ -123,10 +171,19 @@ def main_install():
 
 
 def main_configure():
+    log.info("📁 Ensuring Kodi directories exist with proper ownership...")
+    ensure_kodi_directories()
+
     log.info("🚀 Launching Kodi to initialize configuration folders...")
     launch_and_kill_kodi()
+
     log.info("⚙️  Configuring Kodi sources...")
     configure_kodi_sources()
+
+    # Final check to ensure all directories have proper ownership
+    log.info("🔍 Performing final ownership check on Kodi directories...")
+    ensure_kodi_directories()
+
     log.info("✅ Kodi configuration complete.")
 
 if __name__ == "__main__":
