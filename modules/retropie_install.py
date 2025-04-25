@@ -280,7 +280,8 @@ def configure_button_swap():
 
     # Convert boolean to the numeric string value expected by RetroPie
     # True -> "1", False -> "0"
-    swap_value = "1" if swap_a_b else "0"
+    # The value needs to be quoted in the config file
+    swap_value = '"1"' if swap_a_b else '"0"'
 
     # Check if the file exists
     if os.path.exists(autoconf_path):
