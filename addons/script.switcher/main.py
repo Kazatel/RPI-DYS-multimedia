@@ -32,48 +32,48 @@ APPLICATIONS = {
 
 class AppSwitcherDialog(xbmcgui.Dialog):
     """Dialog for switching between applications"""
-    
+
     def __init__(self):
         super(AppSwitcherDialog, self).__init__()
-        
+
     def show_menu(self):
         """Show the app switcher menu"""
         # Create list of options
         options = []
         for app_id, app_info in APPLICATIONS.items():
             options.append(app_info["name"])
-        
+
         # Show dialog
         index = self.select("Switch to Application", options)
-        
+
         # Handle selection
         if index >= 0:
             app_id = list(APPLICATIONS.keys())[index]
             self.switch_to_app(app_id)
-    
+
     def switch_to_app(self, app_id):
         """Switch to the selected application"""
         if app_id not in APPLICATIONS:
             self.notification(ADDON_NAME, f"Unknown application: {app_id}", xbmcgui.NOTIFICATION_ERROR)
             return
-        
+
         app_info = APPLICATIONS[app_id]
         service_name = app_info["service"]
-        
+
         # Confirm switch
         if not self.yesno(ADDON_NAME, f"Switch to {app_info['name']}?"):
             return
-        
+
         # Execute the switch
         try:
-            # Use systemctl to start the service
+            # Show notification
             xbmc.executebuiltin(f"Notification({ADDON_NAME}, Switching to {app_info['name']}...)")
             xbmc.sleep(2000)  # Give time for notification to show
-            
-            # Use subprocess to start the service
+
+            # Use app_switch.sh script to switch applications
             # This will effectively close Kodi and start the other application
-            subprocess.Popen(["sudo", "systemctl", "start", service_name])
-            
+            subprocess.Popen(["sudo", "/usr/local/bin/app_switch.sh", app_id])
+
         except Exception as e:
             self.notification(ADDON_NAME, f"Error switching: {str(e)}", xbmcgui.NOTIFICATION_ERROR)
 

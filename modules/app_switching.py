@@ -149,46 +149,32 @@ def get_gui_apps():
     return gui_apps
 
 def install_services(gui_apps):
-    """Install the systemd service files for all GUI apps"""
-    with log.log_section("Installing systemd services"):
+    """Install the app switching script"""
+    with log.log_section("Installing app switching script"):
         # Get the script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        services_dir = os.path.join(os.path.dirname(script_dir), "services")
+        project_dir = os.path.dirname(script_dir)
+        app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
 
-        # Copy service files to systemd directory
-        systemd_dir = "/etc/systemd/system"
-        for app_name, app_config in gui_apps.items():
-            service_name = app_config.get("service_name", f"{app_name}.service")
-            source = os.path.join(services_dir, service_name)
-            destination = os.path.join(systemd_dir, service_name)
-
-            if not os.path.exists(source):
-                log.error(f"Service file not found: {source}")
-                continue
-
-            try:
-                # Replace ${USER} with actual username
-                with open(source, 'r') as f:
-                    content = f.read()
-
-                content = content.replace("${USER}", config.USER)
-
-                with open(destination, 'w') as f:
-                    f.write(content)
-
-                log.info(f"Installed {service_name}")
-            except Exception as e:
-                log.error(f"Failed to install {service_name}: {e}")
-                return False
-
-        # Reload systemd
-        reload_result = subprocess.run(["systemctl", "daemon-reload"], capture_output=True, text=True)
-        if reload_result.returncode != 0:
-            log.error(f"Failed to reload systemd: {reload_result.stderr}")
+        if not os.path.exists(app_switch_script):
+            log.error(f"App switching script not found at {app_switch_script}")
             return False
 
-        log.info("Systemd services installed successfully")
-        return True
+        # Copy the script to /usr/local/bin
+        try:
+            # Make the script executable
+            os.chmod(app_switch_script, 0o755)
+
+            # Copy to /usr/local/bin
+            destination = "/usr/local/bin/app_switch.sh"
+            shutil.copy2(app_switch_script, destination)
+            os.chmod(destination, 0o755)
+
+            log.info(f"✅ Installed app_switch.sh to {destination}")
+            return True
+        except Exception as e:
+            log.error(f"❌ Failed to install app switching script: {e}")
+            return False
 
 def create_desktop_shortcuts(gui_apps):
     """Create desktop shortcuts for easy switching with custom icons"""
@@ -241,16 +227,20 @@ def create_desktop_shortcuts(gui_apps):
                 continue
 
             try:
-                # Replace ${USER} with actual username
-                with open(source, 'r') as f:
-                    content = f.read()
-
-                content = content.replace("${USER}", config.USER)
-
+                # Create a desktop file that uses our app_switch.sh script
+                desktop_content = f"""[Desktop Entry]
+Name=Start {app_name.capitalize()}
+Comment=Switch to {app_name.capitalize()}
+Exec=sudo /usr/local/bin/app_switch.sh {app_name}
+Icon=/home/{config.USER}/Pictures/icons/{app_name}.png
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Player;TV;
+"""
                 with open(destination, 'w') as f:
-                    f.write(content)
+                    f.write(desktop_content)
 
-                log.info(f"Created {desktop_file}")
+                log.info(f"Created {desktop_file} using app_switch.sh")
             except Exception as e:
                 log.error(f"Failed to create {desktop_file}: {e}")
                 return False
@@ -289,7 +279,7 @@ def integrate_with_retropie(gui_apps):
             script_path = os.path.join(ports_path, f"Launch {display_name}.sh")
             script_content = f"""#!/bin/bash
 # Script to launch {display_name} from RetroPie
-sudo systemctl start {service_name}
+sudo /usr/local/bin/app_switch.sh {app_name}
 """
 
             try:
@@ -345,7 +335,7 @@ sudo systemctl start {service_name}
         return True
 
 def configure_autostart(gui_apps, boot_app):
-    """Configure which application to start on boot"""
+    """Configure which application to start on boot using .bashrc"""
     with log.log_section(f"Configuring {boot_app} to start on boot"):
         # Check if the boot app is valid
         if boot_app not in gui_apps:
@@ -353,21 +343,58 @@ def configure_autostart(gui_apps, boot_app):
             log.info(f"Valid options are: {', '.join(gui_apps.keys())}")
             return False
 
-        # Disable all services first
-        for app_name, app_config in gui_apps.items():
-            service_name = app_config.get("service_name", f"{app_name}.service")
-            subprocess.run(["systemctl", "disable", service_name], capture_output=True)
+        user = config.USER
+        bashrc_path = f"/home/{user}/.bashrc"
 
-        # Enable the selected service
-        boot_service = gui_apps[boot_app].get("service_name", f"{boot_app}.service")
-        enable_result = subprocess.run(["systemctl", "enable", boot_service], capture_output=True, text=True)
+        # The line to add to .bashrc
+        autostart_line = """
+# Auto-start application on boot
+if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
+  /usr/local/bin/app_switch.sh %s
+fi
+""" % boot_app
 
-        if enable_result.returncode != 0:
-            log.error(f"Failed to enable {boot_service}: {enable_result.stderr}")
+        try:
+            # Check if .bashrc exists
+            if os.path.exists(bashrc_path):
+                with open(bashrc_path, "r") as f:
+                    content = f.read()
+
+                # Check if app_switch.sh is already in .bashrc
+                if "app_switch.sh" in content:
+                    # Update the existing line
+                    new_content = []
+                    for line in content.splitlines():
+                        if "app_switch.sh" in line and not line.strip().startswith("#"):
+                            # Replace the app name
+                            parts = line.split("app_switch.sh")
+                            new_line = parts[0] + f"app_switch.sh {boot_app}"
+                            new_content.append(new_line)
+                        else:
+                            new_content.append(line)
+
+                    with open(bashrc_path, "w") as f:
+                        f.write("\n".join(new_content))
+                    log.info(f"✅ Updated autostart in {bashrc_path}")
+                else:
+                    # Add the autostart line
+                    with open(bashrc_path, "a") as f:
+                        f.write(autostart_line)
+                    log.info(f"✅ Added autostart to {bashrc_path}")
+            else:
+                # Create .bashrc with the autostart line
+                with open(bashrc_path, "w") as f:
+                    f.write(autostart_line)
+                log.info(f"✅ Created {bashrc_path} with autostart")
+
+            # Set proper ownership
+            subprocess.run(["chown", f"{user}:{user}", bashrc_path], check=True)
+
+            log.info(f"{boot_app} will now start on boot")
+            return True
+        except Exception as e:
+            log.error(f"❌ Failed to configure autostart: {e}")
             return False
-
-        log.info(f"{boot_app} will now start on boot")
-        return True
 
 def app_switching_submenu():
     """Interactive app switching submenu"""
