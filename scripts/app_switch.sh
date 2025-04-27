@@ -11,13 +11,17 @@ pkill -u $USER -f lxsession
 # Wait for processes to terminate
 sleep 2
 
+# Set up environment variables
+export DISPLAY=:0
+export XAUTHORITY=$HOME/.Xauthority
+
 case "$APP" in
   kodi)
-    nohup kodi > /dev/null 2>&1 & ;;
+    nohup /usr/bin/kodi --standalone > $HOME/kodi_output.log 2>&1 & ;;
   retropie)
-    nohup emulationstation > /dev/null 2>&1 & ;;
+    nohup /usr/bin/emulationstation > $HOME/retropie_output.log 2>&1 & ;;
   desktop)
-    nohup startx > /dev/null 2>&1 & ;;
+    nohup /usr/bin/startx > $HOME/desktop_output.log 2>&1 & ;;
   *)
     echo "Usage: app_switch.sh [kodi|retropie|desktop]"
     exit 1 ;;
