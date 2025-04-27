@@ -146,7 +146,9 @@ def print_main_menu():
     print("   - Configure Moonlight for NVIDIA GameStream")
     print("7) ⚙️  Advanced Mode")
     print("   - Run individual steps manually (no validation)")
-    print("8) ❌ Exit")
+    print("8) 🔄 Reboot System")
+    print("   - Restart the Raspberry Pi")
+    print("9) ❌ Exit")
 
 
 def setup_app_switching():
@@ -281,10 +283,20 @@ def moonlight_submenu():
             print("❌ Invalid option.")
 
 
+def reboot_system():
+    """Reboot the Raspberry Pi"""
+    print("\n🔄 Preparing to reboot the system...")
+    confirm = input("Are you sure you want to reboot? (y/n): ").strip().lower()
+    if confirm == 'y' or confirm == 'yes':
+        print("🔄 Rebooting now...")
+        subprocess.run(["sudo", "reboot"])
+    else:
+        print("❌ Reboot cancelled.")
+
 def main_menu_loop():
     while True:
         print_main_menu()
-        choice = input("\nEnter your choice (1-8): ").strip()
+        choice = input("\nEnter your choice (1-9): ").strip()
         if choice == "1":
             system_setup()
         elif choice == "2":
@@ -300,10 +312,12 @@ def main_menu_loop():
         elif choice == "7":
             advanced_menu_loop()
         elif choice == "8":
+            reboot_system()
+        elif choice == "9":
             print("👋 Exiting installer.")
             sys.exit(0)
         else:
-            print("❌ Invalid option. Please choose 1–8.")
+            print("❌ Invalid option. Please choose 1–9.")
 
 
 def advanced_menu_loop():
@@ -366,6 +380,7 @@ Examples:
   sudo python install.py app-switching       # Set up app switching
   sudo python install.py bluetooth pair      # Run Bluetooth pairing mode
   sudo python install.py moonlight           # Set up Moonlight streaming
+  sudo python install.py reboot              # Reboot the system
         """
     )
 
@@ -396,6 +411,9 @@ Examples:
 
     # Moonlight
     subparsers.add_parser("moonlight", help="Set up Moonlight streaming")
+
+    # Reboot
+    subparsers.add_parser("reboot", help="Reboot the system")
 
     # Validate
     if CONFIG_VALIDATION_AVAILABLE:
@@ -453,6 +471,8 @@ def main():
             setup_bluetooth()
     elif args.command == "moonlight":
         setup_moonlight()
+    elif args.command == "reboot":
+        reboot_system()
     else:
         # Default to interactive mode
         main_menu_loop()
