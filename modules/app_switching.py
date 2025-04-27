@@ -75,10 +75,25 @@ def install_kodi_addon():
             log.info("✅ Kodi addon installed successfully")
 
             # Enable the addon in Kodi's addon database
-            # This is done by creating/updating the addon_data directory
+            # First create the addon_data directory
             addon_data_dir = f"{kodi_userdata_dir}/addon_data/script.switcher"
             os.makedirs(addon_data_dir, exist_ok=True)
             subprocess.run(["chown", "-R", f"{user}:{user}", addon_data_dir], check=True)
+
+            # Create settings.xml
+            settings_path = os.path.join(addon_data_dir, "settings.xml")
+            with open(settings_path, "w") as f:
+                f.write('<?xml version="1.0" encoding="utf-8" standalone="yes"?>\n<settings>\n</settings>')
+            subprocess.run(["chown", f"{user}:{user}", settings_path], check=True)
+
+            # Run the enable_addon.py script to update Kodi's database
+            enable_script = os.path.join(kodi_addon_dir, "enable_addon.py")
+            try:
+                log.info("Running script to enable addon in Kodi's database")
+                subprocess.run(["python3", enable_script], check=True)
+            except Exception as e:
+                log.warning(f"Failed to run enable script: {e}")
+                log.info("The addon will need to be enabled manually in Kodi")
 
             return True
         except Exception as e:

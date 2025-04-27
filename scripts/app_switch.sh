@@ -1,32 +1,59 @@
 #!/bin/bash
-# Simple app switching script that works without root privileges
 
-APP="$1"
+NEXT_APP="$1"
 
-# Kill current app processes (using pkill -u to only kill user's processes)
-pkill -u "$USER" -f kodi
-pkill -u "$USER" -f emulationstation
-pkill -u "$USER" -f lxsession
+if [ -z "$NEXT_APP" ]; then
+  echo "Usage: $0 <kodi|emulationstation|desktop>"
+  exit 1
+fi
 
-# Wait for processes to terminate
-sleep 3
+graceful_exit() {
+  local process_name="$1"
+  local quit_command="$2"
 
-# Set up environment variables
-export DISPLAY=:0
-export XAUTHORITY="$HOME/.Xauthority"
+  if pgrep -x "$process_name" >/dev/null; then
+    echo "Closing $process_name..."
+    
+    # If there's a quit command, run it
+    if [ -n "$quit_command" ]; then
+      eval "$quit_command"
+      sleep 3  # Give it time to start quitting
+    fi
 
-case "$APP" in
+    # Wait until the process is really gone
+    while pgrep -x "$process_name" >/dev/null; do
+      echo "Waiting for $process_name to exit..."
+      sleep 1
+    done
+
+    echo "$process_name closed."
+  fi
+}
+
+# Close Kodi if running
+graceful_exit "kodi" "kodi-send --action='Quit'"
+
+# Close EmulationStation if running
+graceful_exit "emulationstation" "pkill emulationstation"
+
+# Close Desktop (LXSession or similar) if running
+graceful_exit "lxsession" "pkill lxsession"
+
+# Now start the next app
+echo "Starting $NEXT_APP..."
+
+case "$NEXT_APP" in
   kodi)
-    setsid /usr/bin/kodi --standalone > "$HOME/kodi_output.log" 2>&1 & ;;
-  retropie)
-    setsid /usr/bin/emulationstation > "$HOME/retropie_output.log" 2>&1 & ;;
+    kodi &
+    ;;
+  emulationstation)
+    emulationstation &
+    ;;
   desktop)
-    # If you already have X running, don't call startx, just restart the session manager
-    setsid /usr/bin/lxsession > "$HOME/desktop_output.log" 2>&1 & ;;
+    startlxsession &
+    ;;
   *)
-    echo "Usage: app_switch.sh [kodi|retropie|desktop]"
-    exit 1 ;;
+    echo "Unknown app: $NEXT_APP"
+    exit 1
+    ;;
 esac
-
-# Exit successfully
-exit 0
