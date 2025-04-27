@@ -44,7 +44,7 @@ case "$NEXT_APP" in
   kodi)
     kodi &
     ;;
-  emulationstation)
+  emulationstation|retropie)
     emulationstation &
     ;;
   desktop)
@@ -52,6 +52,7 @@ case "$NEXT_APP" in
     ;;
   *)
     echo "Unknown app: $NEXT_APP"
+    echo "Usage: $0 <kodi|retropie|emulationstation|desktop>"
     exit 1
     ;;
 esac

@@ -30,6 +30,15 @@ APPLICATIONS = {
     }
 }
 
+# Try to find icons in user's Pictures/icons directory
+home_dir = os.path.expanduser("~")
+icons_dir = os.path.join(home_dir, "Pictures", "icons")
+if os.path.exists(icons_dir):
+    for app_id in APPLICATIONS:
+        user_icon = os.path.join(icons_dir, f"{app_id}.png")
+        if os.path.exists(user_icon):
+            APPLICATIONS[app_id]["icon"] = user_icon
+
 class AppSwitcherDialog(xbmcgui.Dialog):
     """Dialog for switching between applications"""
 
@@ -58,7 +67,6 @@ class AppSwitcherDialog(xbmcgui.Dialog):
             return
 
         app_info = APPLICATIONS[app_id]
-        service_name = app_info["service"]
 
         # Confirm switch
         if not self.yesno(ADDON_NAME, f"Switch to {app_info['name']}?"):
