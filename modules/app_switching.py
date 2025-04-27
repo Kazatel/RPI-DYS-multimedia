@@ -390,9 +390,15 @@ fi
                     new_content = []
                     for line in content.splitlines():
                         if "app_switch.sh" in line and not line.strip().startswith("#"):
-                            # Replace the app name
-                            parts = line.split("app_switch.sh")
-                            new_line = parts[0] + f"app_switch.sh {boot_app}"
+                            # Replace with the correct path and app name
+                            if "/usr/local/bin/app_switch.sh" in line:
+                                # If using the old path, replace the entire line
+                                new_line = f"  $HOME/bin/app_switch.sh {boot_app}"
+                                log.info(f"🔄 Replacing old path in .bashrc with $HOME/bin")
+                            else:
+                                # Otherwise just update the app name
+                                parts = line.split("app_switch.sh")
+                                new_line = parts[0] + f"app_switch.sh {boot_app}"
                             new_content.append(new_line)
                         else:
                             new_content.append(line)
