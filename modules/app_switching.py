@@ -149,52 +149,52 @@ def get_gui_apps():
     return gui_apps
 
 def install_services(gui_apps):
-    """Install the app switching script"""
+    """Install the app switching script in user's home directory"""
     with log.log_section("Installing app switching script"):
         # Get the script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_dir = os.path.dirname(script_dir)
-        app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
+        app_switch_script = os.path.join(project_dir, "scripts", "app_switch_user.sh")
 
         if not os.path.exists(app_switch_script):
             log.error(f"App switching script not found at {app_switch_script}")
             return False
 
-        # Copy the script to /usr/local/bin
+        # Copy the script to user's bin directory
         try:
+            user = config.USER
+            user_bin_dir = f"/home/{user}/bin"
+
+            # Create bin directory if it doesn't exist
+            os.makedirs(user_bin_dir, exist_ok=True)
+
+            # Copy the script
+            destination = os.path.join(user_bin_dir, "app_switch.sh")
+            shutil.copy2(app_switch_script, destination)
+
             # Make the script executable
-            os.chmod(app_switch_script, 0o755)
-
-            # Copy to /usr/local/bin with username replacement
-            destination = "/usr/local/bin/app_switch.sh"
-
-            # Read the script content
-            with open(app_switch_script, 'r') as f:
-                content = f.read()
-
-            # Replace the hardcoded username with the one from config
-            content = content.replace('USER="tomas"', f'USER="{config.USER}"')
-
-            # Write the modified script
-            with open(destination, 'w') as f:
-                f.write(content)
-
-            # Make the script executable and world-executable
-            # This ensures any user can execute it
             os.chmod(destination, 0o755)
 
-            # Create a sudoers entry to allow running the script without password
-            sudoers_file = "/etc/sudoers.d/app_switch"
-            user = config.USER
+            # Set proper ownership
+            subprocess.run(["chown", f"{user}:{user}", user_bin_dir], check=True)
+            subprocess.run(["chown", f"{user}:{user}", destination], check=True)
 
-            with open(sudoers_file, "w") as f:
-                f.write(f"{user} ALL=(ALL) NOPASSWD: /usr/local/bin/app_switch.sh\n")
+            # Add bin directory to PATH in .bashrc if not already there
+            bashrc_path = f"/home/{user}/.bashrc"
+            path_line = 'export PATH="$HOME/bin:$PATH"'
 
-            # Set proper permissions on the sudoers file
-            os.chmod(sudoers_file, 0o440)
+            if os.path.exists(bashrc_path):
+                with open(bashrc_path, 'r') as f:
+                    bashrc_content = f.read()
+
+                if path_line not in bashrc_content:
+                    with open(bashrc_path, 'a') as f:
+                        f.write(f"\n# Add user bin directory to PATH\n{path_line}\n")
+
+                    # Set proper ownership
+                    subprocess.run(["chown", f"{user}:{user}", bashrc_path], check=True)
 
             log.info(f"✅ Installed app_switch.sh to {destination}")
-            log.info(f"✅ Created sudoers entry to allow running without password")
             return True
         except Exception as e:
             log.error(f"❌ Failed to install app switching script: {e}")
@@ -251,11 +251,11 @@ def create_desktop_shortcuts(gui_apps):
                 continue
 
             try:
-                # Create a desktop file that uses our app_switch.sh script
+                # Create a desktop file that uses our user-owned app_switch.sh script
                 desktop_content = f"""[Desktop Entry]
 Name=Start {app_name.capitalize()}
 Comment=Switch to {app_name.capitalize()}
-Exec=sudo /usr/local/bin/app_switch.sh {app_name}
+Exec=/home/{config.USER}/bin/app_switch.sh {app_name}
 Icon=/home/{config.USER}/Pictures/icons/{app_name}.png
 Terminal=false
 Type=Application
@@ -303,7 +303,7 @@ def integrate_with_retropie(gui_apps):
             script_path = os.path.join(ports_path, f"Launch {display_name}.sh")
             script_content = f"""#!/bin/bash
 # Script to launch {display_name} from RetroPie
-sudo /usr/local/bin/app_switch.sh {app_name}
+/home/{user}/bin/app_switch.sh {app_name}
 """
 
             try:
@@ -374,7 +374,7 @@ def configure_autostart(gui_apps, boot_app):
         autostart_line = """
 # Auto-start application on boot
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-  sudo /usr/local/bin/app_switch.sh %s
+  $HOME/bin/app_switch.sh %s
 fi
 """ % boot_app
 

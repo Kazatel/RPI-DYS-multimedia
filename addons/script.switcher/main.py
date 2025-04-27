@@ -70,9 +70,11 @@ class AppSwitcherDialog(xbmcgui.Dialog):
             xbmc.executebuiltin(f"Notification({ADDON_NAME}, Switching to {app_info['name']}...)")
             xbmc.sleep(2000)  # Give time for notification to show
 
-            # Use app_switch.sh script to switch applications
+            # Use user-owned app_switch.sh script to switch applications
             # This will effectively close Kodi and start the other application
-            subprocess.Popen(["sudo", "/usr/local/bin/app_switch.sh", app_id])
+            home_dir = os.path.expanduser("~")
+            app_switch_path = os.path.join(home_dir, "bin", "app_switch.sh")
+            subprocess.Popen([app_switch_path, app_id])
 
         except Exception as e:
             self.notification(ADDON_NAME, f"Error switching: {str(e)}", xbmcgui.NOTIFICATION_ERROR)
