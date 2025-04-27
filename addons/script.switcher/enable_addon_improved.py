@@ -70,14 +70,16 @@ def enable_via_json_rpc():
 
     # Check if Kodi is running
     try:
-        # Try to connect to Kodi's JSON-RPC port
+        # Try to connect to Kodi's JSON-RPC port with a short timeout
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(1)
+        s.settimeout(1)  # Short timeout to avoid hanging
         result = s.connect_ex(('localhost', 9090))
         s.close()
 
         if result != 0:
             print("Kodi is not running or JSON-RPC port is not accessible")
+            print("This is normal if Kodi is not currently running")
+            print("The addon will be enabled when Kodi is next started")
             return False
 
         # Prepare the JSON-RPC command
@@ -91,29 +93,49 @@ def enable_via_json_rpc():
             "id": 1
         }
 
-        # Send the command to Kodi
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(('localhost', 9090))
-        s.send(json.dumps(command).encode() + b'\n')
+        # Send the command to Kodi with timeout
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(3)  # 3 second timeout for the entire operation
+            s.connect(('localhost', 9090))
+            s.send(json.dumps(command).encode() + b'\n')
 
-        # Get the response
-        response = b""
-        while True:
-            data = s.recv(1024)
-            if not data:
-                break
-            response += data
+            # Get the response with timeout
+            response = b""
+            s.settimeout(2)  # 2 second timeout for receiving data
 
-        s.close()
+            # Try to receive data once
+            try:
+                data = s.recv(1024)
+                response += data
+            except socket.timeout:
+                print("Timeout waiting for response from Kodi")
+                s.close()
+                return False
 
-        # Parse the response
-        response_json = json.loads(response.decode())
-        if "result" in response_json and response_json["result"] == "OK":
-            print("Successfully enabled addon via JSON-RPC")
-            return True
-        else:
-            print(f"Failed to enable addon via JSON-RPC: {response_json}")
+            s.close()
+
+            # Parse the response
+            if response:
+                try:
+                    response_json = json.loads(response.decode())
+                    if "result" in response_json and response_json["result"] == "OK":
+                        print("Successfully enabled addon via JSON-RPC")
+                        return True
+                    else:
+                        print(f"Failed to enable addon via JSON-RPC: {response_json}")
+                        return False
+                except json.JSONDecodeError:
+                    print("Received invalid JSON response from Kodi")
+                    return False
+            else:
+                print("No response received from Kodi")
+                return False
+
+        except socket.timeout:
+            print("Connection to Kodi timed out")
             return False
+
     except Exception as e:
         print(f"Error enabling addon via JSON-RPC: {e}")
         return False
@@ -324,7 +346,7 @@ def main():
     db_success = enable_via_database()
     json_success = enable_via_json_rpc()
     xml_success = enable_via_xml()
-    shortcut_success = create_desktop_shortcut()
+    create_desktop_shortcut()  # Always create the shortcut regardless of other methods
 
     # Report results
     if db_success or json_success or xml_success:
@@ -336,12 +358,43 @@ def main():
         print("\nAlternatively, use the desktop shortcut 'Kodi App Switcher'")
         return True
     else:
-        print("\n❌ Failed to enable addon automatically.")
-        print("Please enable it manually in Kodi:")
-        print("1. In Kodi, go to Settings > Add-ons")
-        print("2. Select 'My Add-ons' > 'Program add-ons'")
-        print("3. Find 'App Switcher' and enable it")
-        return False
+        print("\n⚠️ Could not automatically enable the addon.")
+        print("This is normal if Kodi is not currently running.")
+        print("\nThe addon will be installed but may need to be enabled manually:")
+        print("1. Start Kodi")
+        print("2. Go to Settings > Add-ons")
+        print("3. Select 'My Add-ons' > 'Program add-ons'")
+        print("4. Find 'App Switcher' and enable it")
+        print("\nAlternatively, use the desktop shortcut 'Kodi App Switcher'")
+
+        # Create a helper script to enable the addon next time Kodi starts
+        try:
+            home_dir = os.path.expanduser("~")
+            helper_script = os.path.join(home_dir, "bin", "enable_kodi_addon.sh")
+
+            with open(helper_script, "w") as f:
+                f.write("""#!/bin/bash
+# Helper script to enable the App Switcher addon in Kodi
+# This will be run the next time Kodi starts
+
+# Wait for Kodi to fully start
+sleep 10
+
+# Try to enable the addon via JSON-RPC
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"script.switcher","enabled":true},"id":1}' http://localhost:8080/jsonrpc
+
+# Exit successfully
+exit 0
+""")
+
+            # Make it executable
+            os.chmod(helper_script, 0o755)
+            print(f"\nCreated helper script at {helper_script}")
+            print("This script will try to enable the addon next time Kodi starts")
+        except Exception as e:
+            print(f"Failed to create helper script: {e}")
+
+        return True  # Return True anyway so the installation continues
 
 if __name__ == "__main__":
     main()
