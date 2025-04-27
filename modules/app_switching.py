@@ -86,14 +86,18 @@ def install_kodi_addon():
                 f.write('<?xml version="1.0" encoding="utf-8" standalone="yes"?>\n<settings>\n</settings>')
             subprocess.run(["chown", f"{user}:{user}", settings_path], check=True)
 
-            # Run the enable_addon.py script to update Kodi's database
-            enable_script = os.path.join(kodi_addon_dir, "enable_addon.py")
+            # Run the improved enable script to update Kodi's configuration
+            enable_script = os.path.join(kodi_addon_dir, "enable_addon_improved.py")
             try:
-                log.info("Running script to enable addon in Kodi's database")
+                log.info("Running improved script to enable addon in Kodi")
                 subprocess.run(["python3", enable_script], check=True)
+                log.info("✅ Addon should be enabled now")
             except Exception as e:
                 log.warning(f"Failed to run enable script: {e}")
-                log.info("The addon will need to be enabled manually in Kodi")
+                log.info("⚠️ The addon will need to be enabled manually in Kodi")
+                log.info("1. In Kodi, go to Settings > Add-ons")
+                log.info("2. Select 'My Add-ons' > 'Program add-ons'")
+                log.info("3. Find 'App Switcher' and enable it")
 
             return True
         except Exception as e:

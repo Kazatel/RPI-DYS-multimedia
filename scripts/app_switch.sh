@@ -9,35 +9,33 @@ fi
 
 graceful_exit() {
   local process_name="$1"
-  local quit_command="$2"
 
   if pgrep -x "$process_name" >/dev/null; then
     echo "Closing $process_name..."
-    
-    # If there's a quit command, run it
-    if [ -n "$quit_command" ]; then
-      eval "$quit_command"
-      sleep 3  # Give it time to start quitting
-    fi
+    pkill "$process_name"
+    sleep 3
 
-    # Wait until the process is really gone
-    while pgrep -x "$process_name" >/dev/null; do
+    local timeout=10
+    while pgrep -x "$process_name" >/dev/null && [ $timeout -gt 0 ]; do
       echo "Waiting for $process_name to exit..."
       sleep 1
+      timeout=$((timeout-1))
     done
+
+    if pgrep -x "$process_name" >/dev/null; then
+      echo "$process_name did not exit gracefully, force killing..."
+      pkill -9 "$process_name"
+      sleep 2
+    fi
 
     echo "$process_name closed."
   fi
 }
 
-# Close Kodi if running
-graceful_exit "kodi" "kodi-send --action='Quit'"
-
-# Close EmulationStation if running
-graceful_exit "emulationstation" "pkill emulationstation"
-
-# Close Desktop (LXSession or similar) if running
-graceful_exit "lxsession" "pkill lxsession"
+# Always close these apps if they are running
+graceful_exit "kodi.bin"
+graceful_exit "emulationstation"
+graceful_exit "lxsession"
 
 # Now start the next app
 echo "Starting $NEXT_APP..."
