@@ -1,30 +1,23 @@
 #!/bin/bash
-# Simple app switching script
-
-# Check if we're running as root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "This script must be run as root (sudo)"
-    exit 1
-fi
+# Simple app switching script that works without root privileges
 
 APP="$1"
-USER="tomas"  # Hardcoded user from config
 
-# Kill current app processes
-pkill -f kodi
-pkill -f emulationstation
-pkill -f lxsession
+# Kill current app processes (using pkill -u to only kill user's processes)
+pkill -u $USER -f kodi
+pkill -u $USER -f emulationstation
+pkill -u $USER -f lxsession
 
 # Wait for processes to terminate
 sleep 2
 
 case "$APP" in
   kodi)
-    su - $USER -c "nohup kodi > /dev/null 2>&1 &" ;;
+    nohup kodi > /dev/null 2>&1 & ;;
   retropie)
-    su - $USER -c "nohup emulationstation > /dev/null 2>&1 &" ;;
+    nohup emulationstation > /dev/null 2>&1 & ;;
   desktop)
-    su - $USER -c "nohup startx > /dev/null 2>&1 &" ;;
+    nohup startx > /dev/null 2>&1 & ;;
   *)
     echo "Usage: app_switch.sh [kodi|retropie|desktop]"
     exit 1 ;;

@@ -154,7 +154,7 @@ def install_services(gui_apps):
         # Get the script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_dir = os.path.dirname(script_dir)
-        app_switch_script = os.path.join(project_dir, "scripts", "app_switch_user.sh")
+        app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
 
         if not os.path.exists(app_switch_script):
             log.error(f"App switching script not found at {app_switch_script}")

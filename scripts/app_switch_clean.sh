@@ -1,5 +1,5 @@
 #!/bin/bash
-# Simple app switching script for user context
+# Simple app switching script that works without root privileges
 
 APP="$1"
 
