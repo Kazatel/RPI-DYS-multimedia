@@ -9,6 +9,7 @@ import shutil
 import config
 from utils.logger import logger_instance as log
 from utils.error_handler import handle_error
+from modules.es_config_updater import ensure_es_systems_config
 
 @handle_error(exit_on_error=False)
 def install_kodi_addon():
@@ -86,7 +87,7 @@ def install_kodi_addon():
                 f.write('<?xml version="1.0" encoding="utf-8" standalone="yes"?>\n<settings>\n</settings>')
             subprocess.run(["chown", f"{user}:{user}", settings_path], check=True)
 
-            # Run the improved enable script to update Kodi's configuration
+            # Run the enable_addon.py script to update Kodi's database
             enable_script = os.path.join(kodi_addon_dir, "enable_addon_improved.py")
             try:
                 log.info("Running improved script to enable addon in Kodi")
@@ -168,7 +169,7 @@ def get_gui_apps():
     return gui_apps
 
 def install_services(gui_apps):
-    """Install the app switching script in user's home directory"""
+    """Install the app switching script in user's home directory and clean up old versions"""
     with log.log_section("Installing app switching script"):
         # Get the script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -198,6 +199,21 @@ def install_services(gui_apps):
             subprocess.run(["chown", f"{user}:{user}", user_bin_dir], check=True)
             subprocess.run(["chown", f"{user}:{user}", destination], check=True)
 
+            # Remove any old versions of the script from system locations
+            old_locations = [
+                "/usr/local/bin/app_switch.sh",
+                "/usr/bin/app_switch.sh",
+                "/opt/retropie/app_switch.sh"
+            ]
+
+            for old_location in old_locations:
+                if os.path.exists(old_location):
+                    try:
+                        log.info(f"Removing old app_switch.sh from {old_location}")
+                        subprocess.run(["sudo", "rm", old_location], check=True)
+                    except Exception as e:
+                        log.warning(f"⚠️ Failed to remove old script at {old_location}: {e}")
+
             # Add bin directory to PATH in .bashrc if not already there
             bashrc_path = f"/home/{user}/.bashrc"
             path_line = 'export PATH="$HOME/bin:$PATH"'
@@ -214,6 +230,7 @@ def install_services(gui_apps):
                     subprocess.run(["chown", f"{user}:{user}", bashrc_path], check=True)
 
             log.info(f"✅ Installed app_switch.sh to {destination}")
+            log.info(f"✅ This is now the only version of app_switch.sh on the system")
             return True
         except Exception as e:
             log.error(f"❌ Failed to install app switching script: {e}")
@@ -291,6 +308,113 @@ Categories=AudioVideo;Video;Player;TV;
         log.info("Desktop shortcuts created successfully")
         return True
 
+def ensure_es_systems_config(user):
+    """
+    Ensure EmulationStation's configuration includes ports and moonlight systems
+    """
+    es_config_path = "/etc/emulationstation/es_systems.cfg"
+
+    if not os.path.exists(es_config_path):
+        log.warning(f"EmulationStation config not found at {es_config_path}")
+        return False
+
+    try:
+        # Read the current config
+        with open(es_config_path, 'r') as f:
+            content = f.read()
+
+        # Check if we need to modify the file
+        modified = False
+
+        # Check for ports system
+        if "<name>ports</name>" not in content:
+            log.info("Adding ports system to EmulationStation config")
+
+            # Create ports system definition
+            ports_system = f"""  <system>
+    <name>ports</name>
+    <fullname>Ports</fullname>
+    <path>/home/{user}/RetroPie/roms/ports</path>
+    <extension>.sh</extension>
+    <command>bash %ROM%</command>
+    <platform>pc</platform>
+    <theme>ports</theme>
+  </system>
+"""
+            # Add before the closing tag
+            content = content.replace("</systemList>", ports_system + "</systemList>")
+            modified = True
+
+        # Check for moonlight system
+        if "<name>moonlight</name>" not in content:
+            log.info("Adding moonlight system to EmulationStation config")
+
+            # Create moonlight system definition
+            moonlight_system = f"""  <system>
+    <name>moonlight</name>
+    <fullname>Moonlight Game Streaming</fullname>
+    <path>/home/{user}/RetroPie/roms/moonlight</path>
+    <extension>.sh</extension>
+    <command>bash %ROM%</command>
+    <platform>pc</platform>
+    <theme>moonlight</theme>
+  </system>
+"""
+            # Add before the closing tag
+            content = content.replace("</systemList>", moonlight_system + "</systemList>")
+            modified = True
+
+        # Write the updated config if modified
+        if modified:
+            # Create a backup first
+            backup_path = f"{es_config_path}.bak"
+            shutil.copy2(es_config_path, backup_path)
+            log.info(f"Created backup of EmulationStation config at {backup_path}")
+
+            with open(es_config_path, 'w') as f:
+                f.write(content)
+
+            log.info("✅ Updated EmulationStation configuration")
+
+            # Create basic theme files if needed
+            theme_dir = "/etc/emulationstation/themes"
+            if os.path.exists(theme_dir):
+                # Find available themes
+                themes = [d for d in os.listdir(theme_dir) if os.path.isdir(os.path.join(theme_dir, d))]
+
+                for theme in themes:
+                    # Create moonlight theme directory if it doesn't exist
+                    moonlight_theme_dir = os.path.join(theme_dir, theme, "moonlight")
+                    if not os.path.exists(moonlight_theme_dir):
+                        os.makedirs(moonlight_theme_dir, exist_ok=True)
+
+                        # Create basic theme.xml
+                        theme_xml = f"""<theme>
+    <formatVersion>3</formatVersion>
+    <include>./../{theme}.xml</include>
+    <view name="system">
+        <text name="systemInfo">
+            <string>Moonlight Game Streaming</string>
+        </text>
+    </view>
+</theme>"""
+
+                        theme_path = os.path.join(moonlight_theme_dir, "theme.xml")
+                        with open(theme_path, 'w') as f:
+                            f.write(theme_xml)
+
+                        log.info(f"Created basic theme for moonlight in {theme}")
+
+            return True
+        else:
+            log.info("EmulationStation config already includes ports and moonlight systems")
+            return True
+
+    except Exception as e:
+        log.error(f"Failed to update EmulationStation config: {e}")
+        return False
+
+
 def integrate_with_retropie(gui_apps):
     """Add app switching options to RetroPie's EmulationStation with custom icons"""
     with log.log_section("Integrating with RetroPie"):
@@ -306,9 +430,16 @@ def integrate_with_retropie(gui_apps):
             log.warning(f"RetroPie roms directory not found at {retropie_roms_path}, skipping integration")
             return False
 
+        # Ensure EmulationStation config includes ports and moonlight systems
+        ensure_es_systems_config(user)
+
         # Create ports directory if it doesn't exist
         ports_path = os.path.join(retropie_roms_path, "ports")
         os.makedirs(ports_path, exist_ok=True)
+
+        # Create moonlight directory if it doesn't exist
+        moonlight_path = os.path.join(retropie_roms_path, "moonlight")
+        os.makedirs(moonlight_path, exist_ok=True)
 
         # Create a script for each app (except RetroPie itself)
         for app_name, app_config in gui_apps.items():
@@ -316,7 +447,6 @@ def integrate_with_retropie(gui_apps):
                 continue
 
             display_name = app_config.get("display_name", app_name)
-            service_name = app_config.get("service_name", f"{app_name}.service")
 
             # Create the script directly in the ports directory
             script_path = os.path.join(ports_path, f"Launch {display_name}.sh")
