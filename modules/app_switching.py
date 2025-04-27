@@ -165,12 +165,36 @@ def install_services(gui_apps):
             # Make the script executable
             os.chmod(app_switch_script, 0o755)
 
-            # Copy to /usr/local/bin
+            # Copy to /usr/local/bin with username replacement
             destination = "/usr/local/bin/app_switch.sh"
-            shutil.copy2(app_switch_script, destination)
+
+            # Read the script content
+            with open(app_switch_script, 'r') as f:
+                content = f.read()
+
+            # Replace the hardcoded username with the one from config
+            content = content.replace('USER="tomas"', f'USER="{config.USER}"')
+
+            # Write the modified script
+            with open(destination, 'w') as f:
+                f.write(content)
+
+            # Make the script executable and world-executable
+            # This ensures any user can execute it
             os.chmod(destination, 0o755)
 
+            # Create a sudoers entry to allow running the script without password
+            sudoers_file = "/etc/sudoers.d/app_switch"
+            user = config.USER
+
+            with open(sudoers_file, "w") as f:
+                f.write(f"{user} ALL=(ALL) NOPASSWD: /usr/local/bin/app_switch.sh\n")
+
+            # Set proper permissions on the sudoers file
+            os.chmod(sudoers_file, 0o440)
+
             log.info(f"✅ Installed app_switch.sh to {destination}")
+            log.info(f"✅ Created sudoers entry to allow running without password")
             return True
         except Exception as e:
             log.error(f"❌ Failed to install app switching script: {e}")
@@ -350,7 +374,7 @@ def configure_autostart(gui_apps, boot_app):
         autostart_line = """
 # Auto-start application on boot
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-  /usr/local/bin/app_switch.sh %s
+  sudo /usr/local/bin/app_switch.sh %s
 fi
 """ % boot_app
 
