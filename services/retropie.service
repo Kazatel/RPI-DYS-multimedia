@@ -4,8 +4,8 @@ After=network.target
 Conflicts=kodi.service desktop.service
 
 [Service]
-User=${USER}
-Group=${USER}
+User=tomas
+Group=tomas
 Type=simple
 ExecStart=/opt/retropie/supplementary/emulationstation/emulationstation
 Restart=on-abort

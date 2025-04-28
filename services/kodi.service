@@ -4,8 +4,8 @@ After=network.target
 Conflicts=retropie.service desktop.service
 
 [Service]
-User=${USER}
-Group=${USER}
+User=tomas
+Group=tomas
 Type=simple
 ExecStart=/usr/bin/kodi-standalone
 Restart=on-abort

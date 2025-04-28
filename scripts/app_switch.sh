@@ -1,58 +1,53 @@
 #!/bin/bash
+# App switching script that uses systemd services
 
-NEXT_APP="$1"
+APP="$1"
 
-if [ -z "$NEXT_APP" ]; then
-  echo "Usage: $0 <kodi|emulationstation|desktop>"
+if [ -z "$APP" ]; then
+  echo "Usage: $0 <kodi|retropie|desktop>"
   exit 1
 fi
 
-graceful_exit() {
-  local process_name="$1"
-
-  if pgrep -x "$process_name" >/dev/null; then
-    echo "Closing $process_name..."
-    pkill "$process_name"
-    sleep 3
-
-    local timeout=10
-    while pgrep -x "$process_name" >/dev/null && [ $timeout -gt 0 ]; do
-      echo "Waiting for $process_name to exit..."
-      sleep 1
-      timeout=$((timeout-1))
-    done
-
-    if pgrep -x "$process_name" >/dev/null; then
-      echo "$process_name did not exit gracefully, force killing..."
-      pkill -9 "$process_name"
-      sleep 2
-    fi
-
-    echo "$process_name closed."
-  fi
+# Function to check if a service is active
+is_service_active() {
+  systemctl --user is-active "$1.service" >/dev/null 2>&1
 }
 
-# Always close these apps if they are running
-graceful_exit "kodi.bin"
-graceful_exit "emulationstation"
-graceful_exit "lxsession"
+# Function to start a service
+start_service() {
+  echo "Starting $1..."
+  systemctl --user start "$1.service"
+}
 
-# Now start the next app
-echo "Starting $NEXT_APP..."
+# Function to stop a service
+stop_service() {
+  echo "Stopping $1..."
+  systemctl --user stop "$1.service"
+}
 
-case "$NEXT_APP" in
+# Stop any running services
+for service in kodi retropie desktop; do
+  if is_service_active "$service"; then
+    stop_service "$service"
+  fi
+done
+
+# Start the requested service
+case "$APP" in
   kodi)
-    kodi &
+    start_service "kodi"
     ;;
-  emulationstation|retropie)
-    emulationstation &
+  retropie|emulationstation)
+    start_service "retropie"
     ;;
   desktop)
-    startlxsession &
+    start_service "desktop"
     ;;
   *)
-    echo "Unknown app: $NEXT_APP"
-    echo "Usage: $0 <kodi|retropie|emulationstation|desktop>"
+    echo "Unknown app: $APP"
+    echo "Usage: $0 <kodi|retropie|desktop>"
     exit 1
     ;;
 esac
+
+exit 0

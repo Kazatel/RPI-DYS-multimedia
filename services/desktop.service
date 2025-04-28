@@ -4,8 +4,8 @@ After=network.target
 Conflicts=kodi.service retropie.service
 
 [Service]
-User=${USER}
-Group=${USER}
+User=tomas
+Group=tomas
 Type=simple
 # This starts the default X session for the pi user
 ExecStart=/usr/bin/startx
