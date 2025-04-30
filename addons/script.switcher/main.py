@@ -16,16 +16,14 @@ ADDON = xbmcaddon.Addon()
 ADDON_NAME = ADDON.getAddonInfo('name')
 ADDON_PATH = xbmcvfs.translatePath(ADDON.getAddonInfo('path'))
 
-# Define the applications and their services
+# Define the applications
 APPLICATIONS = {
     "retropie": {
         "name": "RetroPie",
-        "service": "retropie.service",
         "icon": os.path.join(ADDON_PATH, "resources", "retropie.png")
     },
     "desktop": {
         "name": "Desktop Environment",
-        "service": "desktop.service",
         "icon": os.path.join(ADDON_PATH, "resources", "desktop.png")
     }
 }
@@ -82,6 +80,21 @@ class AppSwitcherDialog(xbmcgui.Dialog):
             # This will effectively close Kodi and start the other application
             home_dir = os.path.expanduser("~")
             app_switch_path = os.path.join(home_dir, "bin", "app_switch.sh")
+
+            # Check if the script exists
+            if not os.path.exists(app_switch_path):
+                self.notification(ADDON_NAME, f"app_switch.sh not found at {app_switch_path}", xbmcgui.NOTIFICATION_ERROR)
+                return
+
+            # Make sure it's executable
+            if not os.access(app_switch_path, os.X_OK):
+                try:
+                    os.chmod(app_switch_path, 0o755)
+                except Exception:
+                    self.notification(ADDON_NAME, f"Could not make {app_switch_path} executable", xbmcgui.NOTIFICATION_ERROR)
+                    return
+
+            # Launch the script
             subprocess.Popen([app_switch_path, app_id])
 
         except Exception as e:

@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=Start Desktop
-Comment=Switch to Desktop Environment
-Exec=sudo systemctl start desktop.service
-Icon=/home/${USER}/Pictures/icons/desktop.png
-Terminal=false
-Type=Application
-Categories=System;

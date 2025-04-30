@@ -317,10 +317,67 @@ def configure_button_swap():
     return True
 
 
+def copy_gamepad_configs():
+    """
+    Copy gamepad configuration files from gamepads_cfg directory to RetroPie's joypad configuration directory
+    """
+    # Path to the source gamepad configs
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(script_dir)
+    gamepads_cfg_dir = os.path.join(project_dir, "gamepads_cfg")
+
+    # Path to the destination directory
+    retropie_joypads_dir = "/opt/retropie/configs/all/retroarch-joypads"
+
+    # Check if source directory exists
+    if not os.path.exists(gamepads_cfg_dir):
+        log.warning(f"⚠️ Gamepad configs directory not found at {gamepads_cfg_dir}")
+        return False
+
+    # Check if destination directory exists
+    if not os.path.exists(retropie_joypads_dir):
+        log.warning(f"⚠️ RetroPie joypad configs directory not found at {retropie_joypads_dir}")
+        return False
+
+    log.info("🎮 Copying gamepad configurations...")
+
+    # Get the user from config
+    user = config.USER
+
+    # Copy each config file
+    copied_count = 0
+    for filename in os.listdir(gamepads_cfg_dir):
+        if filename.endswith(".cfg"):
+            source_file = os.path.join(gamepads_cfg_dir, filename)
+            dest_file = os.path.join(retropie_joypads_dir, filename)
+
+            try:
+                # Copy the file
+                shutil.copy2(source_file, dest_file)
+
+                # Set proper ownership
+                run_command(["chown", f"{user}:{user}", dest_file])
+
+                # Set proper permissions
+                run_command(["chmod", "644", dest_file])
+
+                log.info(f"  ✅ Copied {filename} to {retropie_joypads_dir}")
+                copied_count += 1
+            except Exception as e:
+                log.error(f"  ❌ Failed to copy {filename}: {e}")
+
+    if copied_count > 0:
+        log.info(f"✅ Successfully copied {copied_count} gamepad configuration files")
+    else:
+        log.warning("⚠️ No gamepad configuration files were copied")
+
+    return copied_count > 0
+
 def main_configure():
     sync_retropie_directories()
     install_xbox_controller_driver()
     configure_button_swap()
+    copy_gamepad_configs()
 
 
 if __name__ == "__main__":

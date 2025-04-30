@@ -138,7 +138,7 @@ def setup_app_switching(autostart=None):
             log.info(f"Using first available GUI app: {autostart}")
 
         # Install services
-        if not install_services(gui_apps):
+        if not install_services():
             return False
 
         # Create desktop shortcuts
@@ -168,7 +168,7 @@ def get_gui_apps():
             gui_apps[app_name] = app_config
     return gui_apps
 
-def install_services(gui_apps):
+def install_services():
     """Install the app switching script in user's home directory and clean up old versions"""
     with log.log_section("Installing app switching script"):
         # Get the script directory
@@ -241,7 +241,6 @@ def create_desktop_shortcuts(gui_apps):
     with log.log_section("Creating desktop shortcuts"):
         # Get the script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        services_dir = os.path.join(os.path.dirname(script_dir), "services")
 
         # Create icons directory if it doesn't exist
         user = config.USER
@@ -275,35 +274,57 @@ def create_desktop_shortcuts(gui_apps):
         else:
             log.warning(f"⚠️ Media directory not found at {media_dir}")
 
-        # Copy desktop files to applications directory
-        applications_dir = "/usr/share/applications"
+        # Create desktop files in both system and user locations
+        applications_dir = "/usr/share/applications"  # System-wide applications
+        user_desktop_dir = f"/home/{user}/Desktop"    # User's desktop
+
+        # Create user's desktop directory if it doesn't exist
+        os.makedirs(user_desktop_dir, exist_ok=True)
+        subprocess.run(["chown", f"{user}:{user}", user_desktop_dir], check=True)
+
         for app_name, app_config in gui_apps.items():
+            display_name = app_config.get("display_name", app_name.capitalize())
             desktop_file = f"{app_name}.desktop"
-            source = os.path.join(services_dir, desktop_file)
-            destination = os.path.join(applications_dir, desktop_file)
 
-            if not os.path.exists(source):
-                log.error(f"Desktop file not found: {source}")
-                continue
-
-            try:
-                # Create a desktop file that uses our user-owned app_switch.sh script
-                desktop_content = f"""[Desktop Entry]
-Name=Start {app_name.capitalize()}
-Comment=Switch to {app_name.capitalize()}
-Exec=/home/{config.USER}/bin/app_switch.sh {app_name}
-Icon=/home/{config.USER}/Pictures/icons/{app_name}.png
+            # Create desktop file content
+            desktop_content = f"""[Desktop Entry]
+Name=Start {display_name}
+Comment=Switch to {display_name}
+Exec=/home/{user}/bin/app_switch.sh {app_name}
+Icon=/home/{user}/Pictures/icons/{app_name}.png
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;Player;TV;
 """
-                with open(destination, 'w') as f:
+
+            # 1. Create in system applications directory (requires root)
+            system_destination = os.path.join(applications_dir, desktop_file)
+            try:
+                with open(system_destination, 'w') as f:
                     f.write(desktop_content)
 
-                log.info(f"Created {desktop_file} using app_switch.sh")
+                # Set permissions for system file (readable by all, writable by root)
+                subprocess.run(["chmod", "644", system_destination], check=True)
+
+                log.info(f"Created system desktop file at {system_destination}")
             except Exception as e:
-                log.error(f"Failed to create {desktop_file}: {e}")
-                return False
+                log.warning(f"⚠️ Failed to create system desktop file: {e}")
+                log.info("Continuing with user desktop file creation...")
+
+            # 2. Create in user's desktop directory
+            user_destination = os.path.join(user_desktop_dir, desktop_file)
+            try:
+                with open(user_destination, 'w') as f:
+                    f.write(desktop_content)
+
+                # Set proper ownership and permissions
+                subprocess.run(["chown", f"{user}:{user}", user_destination], check=True)
+                subprocess.run(["chmod", "755", user_destination], check=True)
+
+                log.info(f"Created user desktop file at {user_destination}")
+            except Exception as e:
+                log.error(f"Failed to create user desktop file: {e}")
+                # Continue anyway, don't return False here
 
         log.info("Desktop shortcuts created successfully")
         return True

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Start RetroPie
 Comment=Switch to RetroPie Emulation Platform
-Exec=sudo systemctl start retropie.service
+Exec=/home/${USER}/bin/app_switch.sh retropie
 Icon=/home/${USER}/Pictures/icons/retropie.png
 Terminal=false
 Type=Application
