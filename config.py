@@ -18,7 +18,7 @@ ON_OWN_RISK = False  # Allow running on untested hardware or OS
 # Default user and log location
 USER = 'tomas'
 HOME_DIR = '/home/{USER}'
-PROJECT_DIR = '/home/{USER}/rpi_dys'  # Project directory path
+PROJECT_DIR = '/home/{USER}/RPI-DYS-multimedia/'  # Project directory path
 LOG_DIR = '/home/{USER}/.local/share/rpi_dys/logs'  # User-writable log directory
 
 
