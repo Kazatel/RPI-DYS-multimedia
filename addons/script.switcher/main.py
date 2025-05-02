@@ -76,10 +76,9 @@ class AppSwitcherDialog(xbmcgui.Dialog):
             xbmc.executebuiltin(f"Notification({ADDON_NAME}, Switching to {app_info['name']}...)")
             xbmc.sleep(2000)  # Give time for notification to show
 
-            # Use app_switch.sh script with absolute path from project directory
+            # Use app_switch.sh script from the user's bin directory
             # This will effectively close Kodi and start the other application
-            project_dir = "/home/tomas/rpi_dys"  # Project directory from config
-            app_switch_path = os.path.join(project_dir, "scripts", "app_switch.sh")
+            app_switch_path = os.path.expanduser("~/bin/app_switch.sh")
 
             # Check if the script exists
             if not os.path.exists(app_switch_path):

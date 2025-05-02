@@ -12,40 +12,17 @@ from utils.error_handler import handle_error
 from modules.es_config_updater import ensure_es_systems_config
 
 def get_app_switch_path():
-    """Get the absolute path to the app_switch.sh script"""
-    # Format the path with the actual username
-    project_dir = config.PROJECT_DIR.format(USER=config.USER)
-    return os.path.join(project_dir, "scripts", "app_switch.sh")
+    """Get the path to the app_switch.sh script in the user's bin directory"""
+    return os.path.expanduser("~/bin/app_switch.sh")
 
 def update_paths():
-    """Update paths in Kodi addon, desktop shortcuts, and RetroPie ports scripts"""
-    with log.log_section("Updating paths in components"):
-        try:
-            # Get the path to the update_paths.py script
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            project_dir = os.path.dirname(script_dir)
-            update_script = os.path.join(project_dir, "scripts", "update_paths.py")
-
-            if not os.path.exists(update_script):
-                log.error(f"Update paths script not found at {update_script}")
-                return False
-
-            # Make sure the script is executable
-            os.chmod(update_script, 0o755)
-
-            # Run the script
-            log.info(f"Running update paths script: {update_script}")
-            result = subprocess.run(["python3", update_script], check=True)
-
-            if result.returncode == 0:
-                log.info("✅ Paths updated successfully")
-                return True
-            else:
-                log.error(f"❌ Failed to update paths (exit code {result.returncode})")
-                return False
-        except Exception as e:
-            log.error(f"❌ Failed to update paths: {e}")
-            return False
+    """
+    No need to update paths since we're using $HOME and os.path.expanduser
+    which automatically resolve to the correct home directory
+    """
+    with log.log_section("Checking paths in components"):
+        log.info("✅ Using $HOME and expanduser for paths - no updates needed")
+        return True
 
 @handle_error(exit_on_error=False)
 def install_kodi_addon():
@@ -208,19 +185,31 @@ def get_gui_apps():
     return gui_apps
 
 def install_services():
-    """Create a symbolic link to the app switching script in user's bin directory"""
-    with log.log_section("Setting up app switching script"):
-        # Get the app_switch.sh script path
-        app_switch_script = get_app_switch_path()
+    """Copy the app switching scripts to the user's bin directory"""
+    with log.log_section("Setting up app switching scripts"):
+        # Get the script directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.dirname(script_dir)
+        scripts_dir = os.path.join(project_dir, "scripts")
 
-        if not os.path.exists(app_switch_script):
-            log.error(f"App switching script not found at {app_switch_script}")
-            return False
+        # List of scripts to copy
+        script_files = [
+            "app_switch.sh",
+            "service_manager.sh",
+            "service_manager.py"
+        ]
 
-        # Make sure the script is executable
-        os.chmod(app_switch_script, 0o755)
+        # Check if all scripts exist
+        for script_file in script_files:
+            script_path = os.path.join(scripts_dir, script_file)
+            if not os.path.exists(script_path):
+                log.error(f"Script not found at {script_path}")
+                return False
 
-        # Create a symbolic link in user's bin directory
+            # Make sure the script is executable
+            os.chmod(script_path, 0o755)
+
+        # Copy scripts to user's bin directory
         try:
             user = config.USER
             user_bin_dir = f"/home/{user}/bin"
@@ -231,17 +220,25 @@ def install_services():
             # Set proper ownership for bin directory
             subprocess.run(["chown", f"{user}:{user}", user_bin_dir], check=True)
 
-            # Create symbolic link to app_switch.sh
-            app_switch_link = os.path.join(user_bin_dir, "app_switch.sh")
+            # Copy each script
+            for script_file in script_files:
+                source_path = os.path.join(scripts_dir, script_file)
+                dest_path = os.path.join(user_bin_dir, script_file)
 
-            # Remove existing link or file if it exists
-            if os.path.exists(app_switch_link) or os.path.islink(app_switch_link):
-                os.remove(app_switch_link)
+                # Remove existing file if it exists
+                if os.path.exists(dest_path) or os.path.islink(dest_path):
+                    os.remove(dest_path)
 
-            # Create the symbolic link
-            os.symlink(app_switch_script, app_switch_link)
+                # Copy the script
+                shutil.copy2(source_path, dest_path)
 
-            log.info(f"✅ Created symbolic link to app_switch.sh in {user_bin_dir}")
+                # Make it executable
+                os.chmod(dest_path, 0o755)
+
+                # Set proper ownership
+                subprocess.run(["chown", f"{user}:{user}", dest_path], check=True)
+
+                log.info(f"✅ Copied {script_file} to {user_bin_dir}")
 
             # Remove any old versions of the script from system locations
             old_locations = [
@@ -339,8 +336,8 @@ def create_desktop_shortcuts(gui_apps):
             desktop_content = f"""[Desktop Entry]
 Name=Start {display_name}
 Comment=Switch to {display_name}
-Exec={app_switch_script} {app_name}
-Icon=/home/{user}/Pictures/icons/{app_name}.png
+Exec=$HOME/bin/app_switch.sh {app_name}
+Icon=$HOME/Pictures/icons/{app_name}.png
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;Player;TV;
@@ -527,7 +524,7 @@ def integrate_with_retropie(gui_apps):
             script_path = os.path.join(ports_path, f"Launch {display_name}.sh")
             script_content = f"""#!/bin/bash
 # Script to launch {display_name} from RetroPie
-{app_switch_script} {app_name}
+$HOME/bin/app_switch.sh {app_name}
 """
 
             try:
@@ -594,14 +591,13 @@ def configure_autostart(gui_apps, boot_app):
         user = config.USER
         bashrc_path = f"/home/{user}/.bashrc"
 
-        # Get the path to the app_switch.sh script
-        app_switch_script = get_app_switch_path()
+        # Use the app_switch.sh script from the user's bin directory
 
         # The line to add to .bashrc
         autostart_line = f"""
 # Auto-start application on boot
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-  {app_switch_script} {boot_app}
+  $HOME/bin/app_switch.sh {boot_app}
 fi
 """
 
@@ -619,7 +615,7 @@ fi
                         if "app_switch.sh" in line and not line.strip().startswith("#"):
                             # Create a completely new line with the correct path and app name
                             # This ensures consistency regardless of the previous format
-                            new_line = f"  {app_switch_script} {boot_app}"
+                            new_line = f"  $HOME/bin/app_switch.sh {boot_app}"
                             log.info(f"🔄 Updating app_switch.sh line in .bashrc to use {boot_app}")
                             new_content.append(new_line)
                         else:

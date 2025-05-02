@@ -18,7 +18,6 @@ ON_OWN_RISK = False  # Allow running on untested hardware or OS
 # Default user and log location
 USER = 'tomas'
 HOME_DIR = '/home/{USER}'
-PROJECT_DIR = '/home/{USER}/RPI-DYS-multimedia/'  # Project directory path
 LOG_DIR = '/home/{USER}/.local/share/rpi_dys/logs'  # User-writable log directory
 
 
@@ -134,24 +133,18 @@ APPLICATIONS = {
         "enabled": True,
         "user": USER,
         "type": "GUI",
-        "service_name": "kodi.service",
-        "exec_command": "/usr/bin/kodi-standalone",
         "display_name": "Kodi Media Center"
     },
     "retropie": {
         "enabled": True,
         "user": USER,  # ✅ this should *not* be root
         "type": "GUI",
-        "service_name": "retropie.service",
-        "exec_command": "/opt/retropie/supplementary/emulationstation/emulationstation",
         "display_name": "RetroPie"
     },
     "desktop": {
         "enabled": True,
         "user": USER,
         "type": "GUI",
-        "service_name": "desktop.service",
-        "exec_command": "/usr/bin/startx",
         "display_name": "Desktop Environment"
     },
     "moonlight": {

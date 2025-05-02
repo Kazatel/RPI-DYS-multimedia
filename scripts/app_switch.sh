@@ -1,11 +1,10 @@
 #!/bin/bash
 # App switching script that uses the service_manager.py wrapper
 
-# Use the project directory path from config
-PROJECT_DIR="/home/tomas/rpi_dys"
-SCRIPT_DIR="$PROJECT_DIR/scripts"
+# Get the directory where this script is located
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
-# Paths to the service manager scripts
+# Paths to the service manager scripts in the same directory
 SERVICE_MANAGER_PY="$SCRIPT_DIR/service_manager.py"
 SERVICE_MANAGER_SH="$SCRIPT_DIR/service_manager.sh"
 

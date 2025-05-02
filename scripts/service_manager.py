@@ -2,24 +2,29 @@
 """
 Service Manager - Python wrapper for service_manager.sh
 Controls which user runs which tasks for application switching
+This script is designed to be independent of the project structure
 """
 
 import os
 import sys
 import subprocess
 import argparse
+import getpass
 
-# Add the project root directory to the Python path
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_dir = os.path.dirname(script_dir)
-sys.path.insert(0, project_dir)
+# Simple print function for logging
+def log_info(message):
+    print(f"INFO: {message}")
 
-import config
-from utils.logger import logger_instance as log
+def log_error(message):
+    print(f"ERROR: {message}", file=sys.stderr)
 
-# Path to the service_manager.sh script
+# Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Path to the service_manager.sh script in the same directory
 SERVICE_MANAGER_SCRIPT = os.path.join(SCRIPT_DIR, "service_manager.sh")
+
+# Default user (current user)
+DEFAULT_USER = getpass.getuser()
 
 def run_as_user(command, user=None):
     """
@@ -57,7 +62,7 @@ def kill_service(service):
     Returns:
         bool: True if successful, False otherwise
     """
-    log.info(f"Killing {service}...")
+    log_info(f"Killing {service}...")
 
     # Determine which user should run the kill command
     if service == "desktop":
@@ -65,18 +70,18 @@ def kill_service(service):
         user = "root"
     else:
         # Other services can be killed as the normal user
-        user = config.USER
+        user = DEFAULT_USER
 
     try:
         result = run_as_user([SERVICE_MANAGER_SCRIPT, "kill", service], user)
         if result.returncode == 0:
-            log.info(f"Successfully killed {service}")
+            log_info(f"Successfully killed {service}")
             return True
         else:
-            log.error(f"Failed to kill {service} (exit code {result.returncode})")
+            log_error(f"Failed to kill {service} (exit code {result.returncode})")
             return False
     except Exception as e:
-        log.error(f"Error killing {service}: {e}")
+        log_error(f"Error killing {service}: {e}")
         return False
 
 def start_service(service):
@@ -89,7 +94,7 @@ def start_service(service):
     Returns:
         bool: True if successful, False otherwise
     """
-    log.info(f"Starting {service}...")
+    log_info(f"Starting {service}...")
 
     # Determine which user should run the start command
     if service == "desktop":
@@ -97,18 +102,18 @@ def start_service(service):
         user = "root"
     else:
         # Other services can be started as the normal user
-        user = config.USER
+        user = DEFAULT_USER
 
     try:
         result = run_as_user([SERVICE_MANAGER_SCRIPT, "start", service], user)
         if result.returncode == 0:
-            log.info(f"Successfully started {service}")
+            log_info(f"Successfully started {service}")
             return True
         else:
-            log.error(f"Failed to start {service} (exit code {result.returncode})")
+            log_error(f"Failed to start {service} (exit code {result.returncode})")
             return False
     except Exception as e:
-        log.error(f"Error starting {service}: {e}")
+        log_error(f"Error starting {service}: {e}")
         return False
 
 def switch_to_app(app):
@@ -121,7 +126,7 @@ def switch_to_app(app):
     Returns:
         bool: True if successful, False otherwise
     """
-    log.info(f"Switching to {app}...")
+    log_info(f"Switching to {app}...")
 
     # Map of services to kill for each app
     services_to_kill = {
@@ -132,8 +137,8 @@ def switch_to_app(app):
 
     # Validate the app
     if app not in services_to_kill:
-        log.error(f"Unknown application: {app}")
-        log.info("Valid options are: kodi, emulationstation, desktop")
+        log_error(f"Unknown application: {app}")
+        log_info("Valid options are: kodi, emulationstation, desktop")
         return False
 
     # Kill other services
@@ -167,7 +172,7 @@ def main():
 
     # Check if the service_manager.sh script exists
     if not os.path.exists(SERVICE_MANAGER_SCRIPT):
-        log.error(f"Service manager script not found at {SERVICE_MANAGER_SCRIPT}")
+        log_error(f"Service manager script not found at {SERVICE_MANAGER_SCRIPT}")
         return 1
 
     # Make sure the script is executable
