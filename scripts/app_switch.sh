@@ -1,14 +1,8 @@
 #!/bin/bash
 # App switching script that uses the service_manager.py wrapper
 
-# Try to determine the project directory path
-if [ -f "${BASH_SOURCE[0]}" ]; then
-  # If this script is being run directly
-  PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-else
-  # Fallback to hardcoded path if script is called from somewhere else
-  PROJECT_DIR="/home/tomas/rpi_dys"
-fi
+# Use the project directory path from config
+PROJECT_DIR="/home/tomas/rpi_dys"
 SCRIPT_DIR="$PROJECT_DIR/scripts"
 
 # Paths to the service manager scripts

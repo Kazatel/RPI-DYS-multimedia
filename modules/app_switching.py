@@ -13,7 +13,39 @@ from modules.es_config_updater import ensure_es_systems_config
 
 def get_app_switch_path():
     """Get the absolute path to the app_switch.sh script"""
-    return "/home/tomas/rpi_dys/scripts/app_switch.sh"
+    # Format the path with the actual username
+    project_dir = config.PROJECT_DIR.format(USER=config.USER)
+    return os.path.join(project_dir, "scripts", "app_switch.sh")
+
+def update_paths():
+    """Update paths in Kodi addon, desktop shortcuts, and RetroPie ports scripts"""
+    with log.log_section("Updating paths in components"):
+        try:
+            # Get the path to the update_paths.py script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            project_dir = os.path.dirname(script_dir)
+            update_script = os.path.join(project_dir, "scripts", "update_paths.py")
+
+            if not os.path.exists(update_script):
+                log.error(f"Update paths script not found at {update_script}")
+                return False
+
+            # Make sure the script is executable
+            os.chmod(update_script, 0o755)
+
+            # Run the script
+            log.info(f"Running update paths script: {update_script}")
+            result = subprocess.run(["python3", update_script], check=True)
+
+            if result.returncode == 0:
+                log.info("✅ Paths updated successfully")
+                return True
+            else:
+                log.error(f"❌ Failed to update paths (exit code {result.returncode})")
+                return False
+        except Exception as e:
+            log.error(f"❌ Failed to update paths: {e}")
+            return False
 
 @handle_error(exit_on_error=False)
 def install_kodi_addon():
@@ -157,6 +189,9 @@ def setup_app_switching(autostart=None):
         if "kodi" in gui_apps:
             install_kodi_addon()
 
+        # Update paths in Kodi addon, desktop shortcuts, and RetroPie ports scripts
+        update_paths()
+
         # Configure autostart
         if not configure_autostart(gui_apps, autostart):
             return False
@@ -175,10 +210,8 @@ def get_gui_apps():
 def install_services():
     """Create a symbolic link to the app switching script in user's bin directory"""
     with log.log_section("Setting up app switching script"):
-        # Get the script directory
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_dir = os.path.dirname(script_dir)
-        app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
+        # Get the app_switch.sh script path
+        app_switch_script = get_app_switch_path()
 
         if not os.path.exists(app_switch_script):
             log.error(f"App switching script not found at {app_switch_script}")
@@ -561,10 +594,8 @@ def configure_autostart(gui_apps, boot_app):
         user = config.USER
         bashrc_path = f"/home/{user}/.bashrc"
 
-        # Get the absolute path to the app_switch.sh script
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_dir = os.path.dirname(script_dir)
-        app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
+        # Get the path to the app_switch.sh script
+        app_switch_script = get_app_switch_path()
 
         # The line to add to .bashrc
         autostart_line = f"""
