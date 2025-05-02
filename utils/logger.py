@@ -10,7 +10,13 @@ class Logger:
         # Avoid circular import by importing config locally here
         import config  # Local import to prevent circular import
 
-        self.log_dir = log_dir if log_dir else config.LOG_DIR
+        # Format the log directory path with the user name
+        if log_dir:
+            self.log_dir = log_dir
+        else:
+            # Replace {USER} with the actual username
+            self.log_dir = config.LOG_DIR.format(USER=config.USER)
+
         self.console_level = console_level
         self.file_level = file_level
         self.section_level = 0  # For tracking nested log sections
@@ -26,9 +32,24 @@ class Logger:
 
     def _setup_handlers(self):
         """Set up logging handlers with proper formatting"""
-        # Ensure log directory exists
+        # Ensure log directory exists with correct permissions
         if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+            os.makedirs(self.log_dir, mode=0o755, exist_ok=True)
+
+        # Import here to avoid circular imports
+        import config
+
+        # Set proper ownership if running as root
+        if os.geteuid() == 0 and hasattr(config, 'USER'):
+            try:
+                import pwd
+                import grp
+                user = config.USER
+                uid = pwd.getpwnam(user).pw_uid
+                gid = grp.getgrnam(user).gr_gid
+                os.chown(self.log_dir, uid, gid)
+            except Exception as e:
+                print(f"Warning: Could not set ownership of log directory: {e}")
 
         # Create timestamped log file
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -37,15 +58,27 @@ class Logger:
 
         # Create a symlink to the latest log
         latest_link = os.path.join(self.log_dir, "rpi_dys_latest.log")
-        if os.path.exists(latest_link):
+        if os.path.exists(latest_link) or os.path.islink(latest_link):
             try:
                 os.remove(latest_link)
-            except:
-                pass
+            except Exception as e:
+                print(f"Warning: Could not remove old symlink: {e}")
+
         try:
             os.symlink(log_file, latest_link)
-        except:
-            pass
+
+            # Set proper ownership of the symlink if running as root
+            if os.geteuid() == 0 and hasattr(config, 'USER'):
+                try:
+                    user = config.USER
+                    uid = pwd.getpwnam(user).pw_uid
+                    gid = grp.getgrnam(user).gr_gid
+                    # Use lchown to change ownership of the symlink itself
+                    os.lchown(latest_link, uid, gid)
+                except Exception as e:
+                    print(f"Warning: Could not set ownership of symlink: {e}")
+        except Exception as e:
+            print(f"Warning: Could not create symlink to latest log: {e}")
 
         # File handler with detailed formatting
         file_handler = logging.FileHandler(log_file)
@@ -54,6 +87,19 @@ class Logger:
             '%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
         )
         file_handler.setFormatter(file_formatter)
+
+        # Set proper permissions on the log file
+        os.chmod(log_file, 0o644)
+
+        # Set proper ownership if running as root
+        if os.geteuid() == 0 and hasattr(config, 'USER'):
+            try:
+                user = config.USER
+                uid = pwd.getpwnam(user).pw_uid
+                gid = grp.getgrnam(user).gr_gid
+                os.chown(log_file, uid, gid)
+            except Exception as e:
+                print(f"Warning: Could not set ownership of log file: {e}")
 
         # Console handler with simpler formatting
         console_handler = logging.StreamHandler(sys.stdout)

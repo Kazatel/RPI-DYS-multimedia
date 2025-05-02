@@ -18,7 +18,7 @@ ON_OWN_RISK = False  # Allow running on untested hardware or OS
 # Default user and log location
 USER = 'tomas'
 HOME_DIR = '/home/{USER}'
-LOG_DIR = '/var/log/'  # Log file: rpi_dys_multimedia.log
+LOG_DIR = '/home/{USER}/.local/share/rpi_dys/logs'  # User-writable log directory
 
 
 
