@@ -11,6 +11,10 @@ from utils.logger import logger_instance as log
 from utils.error_handler import handle_error
 from modules.es_config_updater import ensure_es_systems_config
 
+def get_app_switch_path():
+    """Get the absolute path to the app_switch.sh script"""
+    return "/home/tomas/rpi_dys/scripts/app_switch.sh"
+
 @handle_error(exit_on_error=False)
 def install_kodi_addon():
     """
