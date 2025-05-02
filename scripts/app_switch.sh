@@ -1,8 +1,9 @@
 #!/bin/bash
 # App switching script that uses the service_manager.py wrapper
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get the project directory path
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$PROJECT_DIR/scripts"
 
 # Path to the service_manager.py script
 SERVICE_MANAGER="$SCRIPT_DIR/service_manager.py"

@@ -169,8 +169,8 @@ def get_gui_apps():
     return gui_apps
 
 def install_services():
-    """Install the app switching script in user's home directory and clean up old versions"""
-    with log.log_section("Installing app switching script"):
+    """Create a symbolic link to the app switching script in user's bin directory"""
+    with log.log_section("Setting up app switching script"):
         # Get the script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_dir = os.path.dirname(script_dir)
@@ -180,7 +180,10 @@ def install_services():
             log.error(f"App switching script not found at {app_switch_script}")
             return False
 
-        # Copy the script to user's bin directory
+        # Make sure the script is executable
+        os.chmod(app_switch_script, 0o755)
+
+        # Create a symbolic link in user's bin directory
         try:
             user = config.USER
             user_bin_dir = f"/home/{user}/bin"
@@ -188,16 +191,20 @@ def install_services():
             # Create bin directory if it doesn't exist
             os.makedirs(user_bin_dir, exist_ok=True)
 
-            # Copy the script
-            destination = os.path.join(user_bin_dir, "app_switch.sh")
-            shutil.copy2(app_switch_script, destination)
-
-            # Make the script executable
-            os.chmod(destination, 0o755)
-
-            # Set proper ownership
+            # Set proper ownership for bin directory
             subprocess.run(["chown", f"{user}:{user}", user_bin_dir], check=True)
-            subprocess.run(["chown", f"{user}:{user}", destination], check=True)
+
+            # Create symbolic link to app_switch.sh
+            app_switch_link = os.path.join(user_bin_dir, "app_switch.sh")
+
+            # Remove existing link or file if it exists
+            if os.path.exists(app_switch_link) or os.path.islink(app_switch_link):
+                os.remove(app_switch_link)
+
+            # Create the symbolic link
+            os.symlink(app_switch_script, app_switch_link)
+
+            log.info(f"✅ Created symbolic link to app_switch.sh in {user_bin_dir}")
 
             # Remove any old versions of the script from system locations
             old_locations = [
@@ -229,8 +236,8 @@ def install_services():
                     # Set proper ownership
                     subprocess.run(["chown", f"{user}:{user}", bashrc_path], check=True)
 
-            log.info(f"✅ Installed app_switch.sh to {destination}")
-            log.info(f"✅ This is now the only version of app_switch.sh on the system")
+            log.info("✅ All scripts installed successfully")
+            log.info("✅ These are now the only versions of the scripts on the system")
             return True
         except Exception as e:
             log.error(f"❌ Failed to install app switching script: {e}")
@@ -286,11 +293,16 @@ def create_desktop_shortcuts(gui_apps):
             display_name = app_config.get("display_name", app_name.capitalize())
             desktop_file = f"{app_name}.desktop"
 
+            # Get the absolute path to the app_switch.sh script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            project_dir = os.path.dirname(script_dir)
+            app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
+
             # Create desktop file content
             desktop_content = f"""[Desktop Entry]
 Name=Start {display_name}
 Comment=Switch to {display_name}
-Exec=/home/{user}/bin/app_switch.sh {app_name}
+Exec={app_switch_script} {app_name}
 Icon=/home/{user}/Pictures/icons/{app_name}.png
 Terminal=false
 Type=Application
@@ -469,11 +481,16 @@ def integrate_with_retropie(gui_apps):
 
             display_name = app_config.get("display_name", app_name)
 
+            # Get the absolute path to the app_switch.sh script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            project_dir = os.path.dirname(script_dir)
+            app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
+
             # Create the script directly in the ports directory
             script_path = os.path.join(ports_path, f"Launch {display_name}.sh")
             script_content = f"""#!/bin/bash
 # Script to launch {display_name} from RetroPie
-/home/{user}/bin/app_switch.sh {app_name}
+{app_switch_script} {app_name}
 """
 
             try:
@@ -540,13 +557,18 @@ def configure_autostart(gui_apps, boot_app):
         user = config.USER
         bashrc_path = f"/home/{user}/.bashrc"
 
+        # Get the absolute path to the app_switch.sh script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.dirname(script_dir)
+        app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
+
         # The line to add to .bashrc
-        autostart_line = """
+        autostart_line = f"""
 # Auto-start application on boot
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-  $HOME/bin/app_switch.sh %s
+  {app_switch_script} {boot_app}
 fi
-""" % boot_app
+"""
 
         try:
             # Check if .bashrc exists
@@ -560,15 +582,10 @@ fi
                     new_content = []
                     for line in content.splitlines():
                         if "app_switch.sh" in line and not line.strip().startswith("#"):
-                            # Replace with the correct path and app name
-                            if "/usr/local/bin/app_switch.sh" in line:
-                                # If using the old path, replace the entire line
-                                new_line = f"  $HOME/bin/app_switch.sh {boot_app}"
-                                log.info(f"🔄 Replacing old path in .bashrc with $HOME/bin")
-                            else:
-                                # Otherwise just update the app name
-                                parts = line.split("app_switch.sh")
-                                new_line = parts[0] + f"app_switch.sh {boot_app}"
+                            # Create a completely new line with the correct path and app name
+                            # This ensures consistency regardless of the previous format
+                            new_line = f"  {app_switch_script} {boot_app}"
+                            log.info(f"🔄 Updating app_switch.sh line in .bashrc to use {boot_app}")
                             new_content.append(new_line)
                         else:
                             new_content.append(line)
