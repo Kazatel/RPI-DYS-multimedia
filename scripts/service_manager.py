@@ -99,7 +99,7 @@ def start_service(service):
     # Determine which user should run the start command
     if service == "desktop":
         # Desktop needs to be started with sudo
-        user = "root"
+        user = "DEFAULT_USER"
     else:
         # Other services can be started as the normal user
         user = DEFAULT_USER
