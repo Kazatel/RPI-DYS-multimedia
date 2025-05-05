@@ -1,6 +1,7 @@
 ﻿import os
 import shutil
 import hashlib
+import re
 from utils.apt_utils import handle_package_install
 from utils.logger import logger_instance as log
 import config
@@ -373,11 +374,149 @@ def copy_gamepad_configs():
 
     return copied_count > 0
 
+def update_retroarch_config(config_file, options, above_include=False):
+    """
+    Update RetroArch configuration file with the specified options
+
+    Args:
+        config_file (str): Path to the RetroArch configuration file
+        options (dict): Dictionary of options to set in the configuration file
+        above_include (bool): If True, ensure options are placed above the #include line
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not options:
+        log.info(f"ℹ️ No options specified for {config_file}")
+        return True
+
+    if not os.path.exists(os.path.dirname(config_file)):
+        log.warning(f"⚠️ Directory not found for {config_file}")
+        return False
+
+    log.info(f"🔧 Updating RetroArch configuration: {config_file}")
+
+    # Create the file if it doesn't exist
+    if not os.path.exists(config_file):
+        # For system-specific configs, add the standard header and include
+        if above_include:
+            with open(config_file, "w") as f:
+                f.write("# Settings made here will only override settings in the global retroarch.cfg if placed above the #include line\n\n")
+
+                # Write all options
+                for key, value in options.items():
+                    f.write(f"{key} = \"{value}\"\n")
+
+                f.write("\n#include \"/opt/retropie/configs/all/retroarch.cfg\"\n")
+
+            log.info(f"✅ Created {config_file} with {len(options)} options")
+            return True
+        else:
+            # For global config, just create an empty file
+            with open(config_file, "w") as f:
+                f.write("")
+
+    # Read the current content
+    with open(config_file, "r") as f:
+        content = f.read()
+
+    # For system-specific configs that need options above the include line
+    if above_include and "#include" in content:
+        lines = content.splitlines()
+        include_index = -1
+
+        # Find the include line
+        for i, line in enumerate(lines):
+            if line.strip().startswith("#include"):
+                include_index = i
+                break
+
+        if include_index >= 0:
+            # Process each option
+            for key, value in options.items():
+                # Check if the option already exists above the include line
+                option_exists = False
+                for i in range(include_index):
+                    if lines[i].strip().startswith(f"{key} ="):
+                        # Update the existing option
+                        lines[i] = f"{key} = \"{value}\""
+                        option_exists = True
+                        log.info(f"  🔄 Updated option: {key} = \"{value}\"")
+                        break
+
+                # If the option doesn't exist, add it above the include line
+                if not option_exists:
+                    lines.insert(include_index, f"{key} = \"{value}\"")
+                    include_index += 1  # Adjust the index since we added a line
+                    log.info(f"  ➕ Added option: {key} = \"{value}\"")
+
+            # Write the updated content
+            with open(config_file, "w") as f:
+                f.write("\n".join(lines))
+
+            log.info(f"✅ Updated {config_file} with {len(options)} options above the include line")
+            return True
+    else:
+        # For global config or files without include line, process each option
+        modified = False
+
+        for key, value in options.items():
+            # Check if the option already exists
+            pattern = re.compile(f"^{re.escape(key)}\\s*=\\s*\".*\"", re.MULTILINE)
+            if pattern.search(content):
+                # Update the existing option
+                content = pattern.sub(f"{key} = \"{value}\"", content)
+                log.info(f"  🔄 Updated option: {key} = \"{value}\"")
+                modified = True
+            else:
+                # Add the option at the end
+                if content and not content.endswith("\n"):
+                    content += "\n"
+                content += f"{key} = \"{value}\"\n"
+                log.info(f"  ➕ Added option: {key} = \"{value}\"")
+                modified = True
+
+        # Write the updated content
+        if modified:
+            with open(config_file, "w") as f:
+                f.write(content)
+
+            log.info(f"✅ Updated {config_file} with {len(options)} options")
+        else:
+            log.info(f"ℹ️ No changes needed for {config_file}")
+
+        return True
+
+def configure_retroarch_options():
+    """
+    Configure RetroArch options based on config settings
+    """
+    log.info("🎮 Configuring RetroArch options...")
+
+    # Update global RetroArch options
+    if hasattr(config, "RETROPIE_ALL_OPTIONS") and config.RETROPIE_ALL_OPTIONS:
+        global_config = "/opt/retropie/configs/all/retroarch.cfg"
+        update_retroarch_config(global_config, config.RETROPIE_ALL_OPTIONS)
+
+    # Update core options
+    if hasattr(config, "RETROPIE_CORE_OPTIONS") and config.RETROPIE_CORE_OPTIONS:
+        core_options = "/opt/retropie/configs/all/retroarch-core-options.cfg"
+        update_retroarch_config(core_options, config.RETROPIE_CORE_OPTIONS)
+
+    # Update system-specific options (these need to be placed above the include line)
+    if hasattr(config, "RETROPIE_PSX_OPTIONS") and config.RETROPIE_PSX_OPTIONS:
+        psx_config = "/opt/retropie/configs/psx/retroarch.cfg"
+        update_retroarch_config(psx_config, config.RETROPIE_PSX_OPTIONS, above_include=True)
+
+    log.info("✅ RetroArch configuration completed")
+    return True
+
 def main_configure():
     sync_retropie_directories()
     install_xbox_controller_driver()
     configure_button_swap()
     copy_gamepad_configs()
+    configure_retroarch_options()
 
 
 if __name__ == "__main__":

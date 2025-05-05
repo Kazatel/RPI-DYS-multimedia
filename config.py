@@ -203,5 +203,39 @@ GAMEPADS = {
 GAMEPAD_XBOX_SUPPORT = 'xpad'
 
 # Swap A/B buttons in EmulationStation and RetroArch
-# Set to True to swap A/B buttons (useful for Nintendo-style controllers) Default: False
+# Set to True to swap A/B buttons (useful for Nintendo-style controllers)
+# DEFAULT: False
 RETROPIE_ES_SWAP_A_B = True
+
+
+# RetroArch core options configuration file
+# Path: /opt/retropie/configs/all/retroarch-core-options.cfg
+# These options control specific emulator core behaviors
+RETROPIE_CORE_OPTIONS = {
+    # PCSX ReARMed PlayStation emulator enhancement options
+    # DEFAULT: "disabled"
+    "pcsx_rearmed_neon_enhancement_enable": "disabled",
+
+    # PCSX ReARMed enhancement for non-main elements
+    # DEFAULT: "disabled"
+    "pcsx_rearmed_neon_enhancement_no_main": "disabled"
+}
+
+# PlayStation-specific RetroArch configuration
+# Path: /opt/retropie/configs/psx/retroarch.cfg
+# These options only apply to PlayStation emulation
+RETROPIE_PSX_OPTIONS = {
+    # Enable video smoothing for PlayStation games
+    # DEFAULT: "option not presented"
+    "video_smooth": "true"
+}
+
+# Global RetroArch configuration for all emulators
+# Path: /opt/retropie/configs/all/retroarch.cfg
+# These options apply to all emulated systems
+RETROPIE_ALL_OPTIONS = {
+    # Aspect ratio index (20 = custom aspect ratio)
+    # DEFAULT: 0 (4:3)
+    # 22 (16:9)
+    "aspect_ratio_index": 20
+}
