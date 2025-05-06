@@ -37,20 +37,13 @@ def run_as_user(command, user=None):
     Returns:
         subprocess.CompletedProcess: The result of the command
     """
-    if user is None or user == os.getenv("USER"):
-        # Run as current user
-        if isinstance(command, list):
-            return subprocess.run(command)
-        else:
-            return subprocess.run(command, shell=True)
+
+    if isinstance(command, list):
+        sudo_cmd = ["sudo", "-u", "tomas"] + command
+        return subprocess.run(sudo_cmd)
     else:
-        # Run as different user using sudo
-        if isinstance(command, list):
-            sudo_cmd = ["sudo", "-u", user] + command
-            return subprocess.run(sudo_cmd)
-        else:
-            sudo_cmd = f"sudo -u {user} {command}"
-            return subprocess.run(sudo_cmd, shell=True)
+        sudo_cmd = f"sudo -u tomas {command}"
+        return subprocess.run(sudo_cmd, shell=True)
 
 def kill_service(service):
     """
