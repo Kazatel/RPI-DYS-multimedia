@@ -141,7 +141,7 @@ start_app() {
         echo "WARNING: EmulationStation may not have launched properly"
       fi
       ;;
-    lxsession)
+    desktop)
       if pgrep lxsession >/dev/null; then
         echo "LXDE session has been launched successfully"
       else
@@ -163,11 +163,12 @@ if [ "$ACTION" = "kill" ]; then
     emulationstation)
       terminate_app "emulationstation" "true"
       ;;
-    lxsession)
+    desktop)
       terminate_app "lxsession" "true"
       ;;
     *)
       echo "Unknown service: $SERVICE"
+      echo "Usage: $0 <kill|start> <kodi|emulationstation|desktop>"
       exit 1
       ;;
   esac

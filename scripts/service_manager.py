@@ -24,7 +24,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVICE_MANAGER_SCRIPT = os.path.join(SCRIPT_DIR, "service_manager.sh")
 
 # Default user (current user)
-DEFAULT_USER = 'tomas'
+DEFAULT_USER = getpass.getuser()
 
 def run_as_user(command, user=None):
     """
@@ -37,13 +37,20 @@ def run_as_user(command, user=None):
     Returns:
         subprocess.CompletedProcess: The result of the command
     """
-
-    if isinstance(command, list):
-        sudo_cmd = ["sudo", "-u", "tomas"] + command
-        return subprocess.run(sudo_cmd)
+    if user is None or user == os.getenv("USER"):
+        # Run as current user
+        if isinstance(command, list):
+            return subprocess.run(command)
+        else:
+            return subprocess.run(command, shell=True)
     else:
-        sudo_cmd = f"sudo -u tomas {command}"
-        return subprocess.run(sudo_cmd, shell=True)
+        # Run as different user using sudo
+        if isinstance(command, list):
+            sudo_cmd = ["sudo", "-u", user] + command
+            return subprocess.run(sudo_cmd)
+        else:
+            sudo_cmd = f"sudo -u {user} {command}"
+            return subprocess.run(sudo_cmd, shell=True)
 
 def kill_service(service):
     """
@@ -92,7 +99,7 @@ def start_service(service):
     # Determine which user should run the start command
     if service == "desktop":
         # Desktop needs to be started with sudo
-        user = DEFAULT_USER
+        user = "root"
     else:
         # Other services can be started as the normal user
         user = DEFAULT_USER
