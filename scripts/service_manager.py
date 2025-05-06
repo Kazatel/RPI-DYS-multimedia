@@ -24,7 +24,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVICE_MANAGER_SCRIPT = os.path.join(SCRIPT_DIR, "service_manager.sh")
 
 # Default user (current user)
-DEFAULT_USER = getpass.getuser()
+DEFAULT_USER = 'tomas'
 
 def run_as_user(command, user=None):
     """
