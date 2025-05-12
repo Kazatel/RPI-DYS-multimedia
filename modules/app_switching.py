@@ -6,6 +6,7 @@ Handles setup of app switching between GUI applications
 import os
 import subprocess
 import shutil
+import tempfile
 import config
 from utils.logger import logger_instance as log
 from utils.error_handler import handle_error
@@ -288,13 +289,21 @@ def create_desktop_shortcuts(gui_apps):
         else:
             log.warning(f"⚠️ Media directory not found at {media_dir}")
 
-        # Create desktop files in both system and user locations
+        # Create desktop files in system, user, and root locations
         applications_dir = "/usr/share/applications"  # System-wide applications
         user_desktop_dir = f"/home/{user}/Desktop"    # User's desktop
+        root_desktop_dir = "/root/Desktop"            # Root user's desktop
 
         # Create user's desktop directory if it doesn't exist
         os.makedirs(user_desktop_dir, exist_ok=True)
         subprocess.run(["chown", f"{user}:{user}", user_desktop_dir], check=True)
+
+        # Create root's desktop directory if it doesn't exist
+        try:
+            subprocess.run(["sudo", "mkdir", "-p", root_desktop_dir], check=True)
+            log.info(f"✅ Created or verified root desktop directory at {root_desktop_dir}")
+        except Exception as e:
+            log.warning(f"⚠️ Failed to create root desktop directory: {e}")
 
         for app_name, app_config in gui_apps.items():
             display_name = app_config.get("display_name", app_name.capitalize())
@@ -338,6 +347,54 @@ Categories=AudioVideo;Video;Player;TV;
                 log.info(f"Created user desktop file at {user_destination}")
             except Exception as e:
                 log.error(f"Failed to create user desktop file: {e}")
+                # Continue anyway, don't return False here
+
+            # 3. Create in root's desktop directory with absolute paths
+            root_destination = os.path.join(root_desktop_dir, desktop_file)
+            try:
+                # Get the absolute path to the project directory
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                project_dir = os.path.dirname(script_dir)
+                app_switch_path = os.path.join(project_dir, "scripts", "app_switch.py")
+
+                # Create desktop file content with absolute paths for root
+                root_desktop_content = f"""[Desktop Entry]
+Name=Start {display_name}
+Comment=Switch to {display_name}
+Exec=python3 {app_switch_path} {app_name}
+Icon=/root/Pictures/icons/{app_name}.png
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Player;TV;
+"""
+
+                # We need to use sudo to write to root's desktop
+                with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+                    temp_file.write(root_desktop_content)
+                    temp_path = temp_file.name
+
+                # Copy the temp file to root's desktop using sudo
+                subprocess.run(["sudo", "cp", temp_path, root_destination], check=True)
+
+                # Remove the temp file
+                os.unlink(temp_path)
+
+                # Set proper permissions
+                subprocess.run(["sudo", "chmod", "755", root_destination], check=True)
+
+                # Also copy the icon to root's Pictures/icons directory
+                root_icons_dir = "/root/Pictures/icons"
+                subprocess.run(["sudo", "mkdir", "-p", root_icons_dir], check=True)
+
+                source_icon = os.path.join(icons_dir, f"{app_name}.png")
+                if os.path.exists(source_icon):
+                    root_icon_path = os.path.join(root_icons_dir, f"{app_name}.png")
+                    subprocess.run(["sudo", "cp", source_icon, root_icon_path], check=True)
+                    log.info(f"Copied icon for {app_name} to root's icons directory")
+
+                log.info(f"Created root desktop file at {root_destination}")
+            except Exception as e:
+                log.error(f"Failed to create root desktop file: {e}")
                 # Continue anyway, don't return False here
 
         log.info("Desktop shortcuts created successfully")
