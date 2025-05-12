@@ -185,14 +185,17 @@ def get_gui_apps():
     return gui_apps
 
 def install_services():
-    """Copy the app switching scripts to the user's bin directory"""
+    """
+    Set up app switching scripts using the DYS_RPI environment variable
+    No need to copy scripts to ~/bin anymore
+    """
     with log.log_section("Setting up app switching scripts"):
         # Get the script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_dir = os.path.dirname(script_dir)
         scripts_dir = os.path.join(project_dir, "scripts")
 
-        # List of scripts to copy
+        # List of scripts to check
         script_files = [
             "app_switch.sh",
             "service_manager.sh",
@@ -208,73 +211,38 @@ def install_services():
 
             # Make sure the script is executable
             os.chmod(script_path, 0o755)
+            log.info(f"✅ Made {script_file} executable")
 
-        # Copy scripts to user's bin directory
+        # Remove any old versions of the script from system locations and ~/bin
         try:
             user = config.USER
-            user_bin_dir = f"/home/{user}/bin"
-
-            # Create bin directory if it doesn't exist
-            os.makedirs(user_bin_dir, exist_ok=True)
-
-            # Set proper ownership for bin directory
-            subprocess.run(["chown", f"{user}:{user}", user_bin_dir], check=True)
-
-            # Copy each script
-            for script_file in script_files:
-                source_path = os.path.join(scripts_dir, script_file)
-                dest_path = os.path.join(user_bin_dir, script_file)
-
-                # Remove existing file if it exists
-                if os.path.exists(dest_path) or os.path.islink(dest_path):
-                    os.remove(dest_path)
-
-                # Copy the script
-                shutil.copy2(source_path, dest_path)
-
-                # Make it executable
-                os.chmod(dest_path, 0o755)
-
-                # Set proper ownership
-                subprocess.run(["chown", f"{user}:{user}", dest_path], check=True)
-
-                log.info(f"✅ Copied {script_file} to {user_bin_dir}")
-
-            # Remove any old versions of the script from system locations
             old_locations = [
                 "/usr/local/bin/app_switch.sh",
                 "/usr/bin/app_switch.sh",
-                "/opt/retropie/app_switch.sh"
+                "/opt/retropie/app_switch.sh",
+                f"/home/{user}/bin/app_switch.sh",
+                f"/home/{user}/bin/service_manager.sh",
+                f"/home/{user}/bin/service_manager.py"
             ]
 
             for old_location in old_locations:
                 if os.path.exists(old_location):
                     try:
-                        log.info(f"Removing old app_switch.sh from {old_location}")
-                        subprocess.run(["sudo", "rm", old_location], check=True)
+                        log.info(f"Removing old script from {old_location}")
+                        if old_location.startswith(f"/home/{user}"):
+                            # User's files can be removed directly
+                            os.remove(old_location)
+                        else:
+                            # System files need sudo
+                            subprocess.run(["sudo", "rm", old_location], check=True)
                     except Exception as e:
                         log.warning(f"⚠️ Failed to remove old script at {old_location}: {e}")
 
-            # Add bin directory to PATH in .bashrc if not already there
-            bashrc_path = f"/home/{user}/.bashrc"
-            path_line = 'export PATH="$HOME/bin:$PATH"'
-
-            if os.path.exists(bashrc_path):
-                with open(bashrc_path, 'r') as f:
-                    bashrc_content = f.read()
-
-                if path_line not in bashrc_content:
-                    with open(bashrc_path, 'a') as f:
-                        f.write(f"\n# Add user bin directory to PATH\n{path_line}\n")
-
-                    # Set proper ownership
-                    subprocess.run(["chown", f"{user}:{user}", bashrc_path], check=True)
-
-            log.info("✅ All scripts installed successfully")
-            log.info("✅ These are now the only versions of the scripts on the system")
+            log.info("✅ App switching scripts setup completed")
+            log.info("✅ Scripts will be accessed using the DYS_RPI environment variable")
             return True
         except Exception as e:
-            log.error(f"❌ Failed to install app switching script: {e}")
+            log.error(f"❌ Failed to set up app switching scripts: {e}")
             return False
 
 def create_desktop_shortcuts(gui_apps):
@@ -327,16 +295,11 @@ def create_desktop_shortcuts(gui_apps):
             display_name = app_config.get("display_name", app_name.capitalize())
             desktop_file = f"{app_name}.desktop"
 
-            # Get the absolute path to the app_switch.sh script
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            project_dir = os.path.dirname(script_dir)
-            app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
-
-            # Create desktop file content
+            # Create desktop file content using DYS_RPI environment variable
             desktop_content = f"""[Desktop Entry]
 Name=Start {display_name}
 Comment=Switch to {display_name}
-Exec=$HOME/bin/app_switch.sh {app_name}
+Exec=python3 ${DYS_RPI}/scripts/app_switch.py {app_name}
 Icon=$HOME/Pictures/icons/{app_name}.png
 Terminal=false
 Type=Application
@@ -412,24 +375,6 @@ def ensure_es_systems_config(user):
             content = content.replace("</systemList>", ports_system + "</systemList>")
             modified = True
 
-        # Check for moonlight system
-        if "<name>moonlight</name>" not in content:
-            log.info("Adding moonlight system to EmulationStation config")
-
-            # Create moonlight system definition
-            moonlight_system = f"""  <system>
-    <name>moonlight</name>
-    <fullname>Moonlight Game Streaming</fullname>
-    <path>/home/{user}/RetroPie/roms/moonlight</path>
-    <extension>.sh</extension>
-    <command>bash %ROM%</command>
-    <platform>pc</platform>
-    <theme>moonlight</theme>
-  </system>
-"""
-            # Add before the closing tag
-            content = content.replace("</systemList>", moonlight_system + "</systemList>")
-            modified = True
 
         # Write the updated config if modified
         if modified:
@@ -443,38 +388,9 @@ def ensure_es_systems_config(user):
 
             log.info("✅ Updated EmulationStation configuration")
 
-            # Create basic theme files if needed
-            theme_dir = "/etc/emulationstation/themes"
-            if os.path.exists(theme_dir):
-                # Find available themes
-                themes = [d for d in os.listdir(theme_dir) if os.path.isdir(os.path.join(theme_dir, d))]
-
-                for theme in themes:
-                    # Create moonlight theme directory if it doesn't exist
-                    moonlight_theme_dir = os.path.join(theme_dir, theme, "moonlight")
-                    if not os.path.exists(moonlight_theme_dir):
-                        os.makedirs(moonlight_theme_dir, exist_ok=True)
-
-                        # Create basic theme.xml
-                        theme_xml = f"""<theme>
-    <formatVersion>3</formatVersion>
-    <include>./../{theme}.xml</include>
-    <view name="system">
-        <text name="systemInfo">
-            <string>Moonlight Game Streaming</string>
-        </text>
-    </view>
-</theme>"""
-
-                        theme_path = os.path.join(moonlight_theme_dir, "theme.xml")
-                        with open(theme_path, 'w') as f:
-                            f.write(theme_xml)
-
-                        log.info(f"Created basic theme for moonlight in {theme}")
-
             return True
         else:
-            log.info("EmulationStation config already includes ports and moonlight systems")
+            log.info("EmulationStation config already includes ports")
             return True
 
     except Exception as e:
@@ -504,10 +420,6 @@ def integrate_with_retropie(gui_apps):
         ports_path = os.path.join(retropie_roms_path, "ports")
         os.makedirs(ports_path, exist_ok=True)
 
-        # Create moonlight directory if it doesn't exist
-        moonlight_path = os.path.join(retropie_roms_path, "moonlight")
-        os.makedirs(moonlight_path, exist_ok=True)
-
         # Create a script for each app (except RetroPie itself)
         for app_name, app_config in gui_apps.items():
             if app_name == "retropie":
@@ -515,16 +427,11 @@ def integrate_with_retropie(gui_apps):
 
             display_name = app_config.get("display_name", app_name)
 
-            # Get the absolute path to the app_switch.sh script
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            project_dir = os.path.dirname(script_dir)
-            app_switch_script = os.path.join(project_dir, "scripts", "app_switch.sh")
-
             # Create the script directly in the ports directory
             script_path = os.path.join(ports_path, f"Launch {display_name}.sh")
             script_content = f"""#!/bin/bash
 # Script to launch {display_name} from RetroPie
-$HOME/bin/app_switch.sh {app_name}
+python3 ${{DYS_RPI}}/scripts/app_switch.py {app_name}
 """
 
             try:
@@ -593,11 +500,11 @@ def configure_autostart(gui_apps, boot_app):
 
         # Use the app_switch.sh script from the user's bin directory
 
-        # The line to add to .bashrc
+        # The line to add to .bashrc using DYS_RPI environment variable
         autostart_line = f"""
 # Auto-start application on boot
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-  $HOME/bin/app_switch.sh {boot_app}
+  python3 ${{DYS_RPI}}/scripts/app_switch.py {boot_app}
 fi
 """
 
@@ -615,7 +522,7 @@ fi
                         if "app_switch.sh" in line and not line.strip().startswith("#"):
                             # Create a completely new line with the correct path and app name
                             # This ensures consistency regardless of the previous format
-                            new_line = f"  $HOME/bin/app_switch.sh {boot_app}"
+                            new_line = f"  python3 ${{DYS_RPI}}/scripts/app_switch.py {boot_app}"
                             log.info(f"🔄 Updating app_switch.sh line in .bashrc to use {boot_app}")
                             new_content.append(new_line)
                         else:

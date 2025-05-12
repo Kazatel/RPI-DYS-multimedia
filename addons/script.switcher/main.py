@@ -76,13 +76,19 @@ class AppSwitcherDialog(xbmcgui.Dialog):
             xbmc.executebuiltin(f"Notification({ADDON_NAME}, Switching to {app_info['name']}...)")
             xbmc.sleep(2000)  # Give time for notification to show
 
-            # Use app_switch.sh script from the user's bin directory
+            # Use app_switch.py script from the DYS_RPI environment variable
             # This will effectively close Kodi and start the other application
-            app_switch_path = os.path.expanduser("~/bin/app_switch.sh")
+            dys_rpi = os.environ.get('DYS_RPI')
+
+            if not dys_rpi:
+                self.notification(ADDON_NAME, "DYS_RPI environment variable not set", xbmcgui.NOTIFICATION_ERROR)
+                return
+
+            app_switch_path = os.path.join(dys_rpi, "scripts", "app_switch.py")
 
             # Check if the script exists
             if not os.path.exists(app_switch_path):
-                self.notification(ADDON_NAME, f"app_switch.sh not found at {app_switch_path}", xbmcgui.NOTIFICATION_ERROR)
+                self.notification(ADDON_NAME, f"app_switch.py not found at {app_switch_path}", xbmcgui.NOTIFICATION_ERROR)
                 return
 
             # Make sure it's executable
@@ -94,7 +100,7 @@ class AppSwitcherDialog(xbmcgui.Dialog):
                     return
 
             # Launch the script
-            subprocess.Popen([app_switch_path, app_id])
+            subprocess.Popen(["python3", app_switch_path, app_id])
 
         except Exception as e:
             self.notification(ADDON_NAME, f"Error switching: {str(e)}", xbmcgui.NOTIFICATION_ERROR)

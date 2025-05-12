@@ -78,9 +78,60 @@ def create_or_overwrite_bash_aliases():
         log.error(f"❌ Error creating or overwriting {bash_aliases_path}: {e}")
 
 
+def setup_project_environment_variable():
+    """
+    Set up a system-wide environment variable DYS_RPI pointing to the project directory
+    This allows all scripts to reference the project directory directly
+    """
+    log.info("🔧 Setting up project environment variable DYS_RPI...")
+
+    # Get the absolute path to the project directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(script_dir)
+
+    # Environment variable name
+    env_var_name = "DYS_RPI"
+    env_file_path = "/etc/environment"
+
+    # Read current /etc/environment
+    try:
+        with open(env_file_path, "r") as f:
+            current_content = f.read()
+    except Exception as e:
+        log.error(f"❌ Failed to read {env_file_path}: {e}")
+        current_content = ""
+
+    # Check if the variable is already set correctly
+    env_line = f'{env_var_name}="{project_dir}"'
+    if env_line in current_content:
+        log.info(f"✅ Environment variable {env_var_name} already set to {project_dir}")
+        return True
+
+    # Remove any existing setting for this variable
+    new_lines = []
+    for line in current_content.splitlines():
+        if not line.startswith(f"{env_var_name}="):
+            new_lines.append(line)
+
+    # Add the new environment variable
+    new_lines.append(env_line)
+
+    # Write back to /etc/environment
+    try:
+        with open(env_file_path, "w") as f:
+            f.write("\n".join(new_lines) + "\n")
+        log.info(f"✅ Set {env_var_name} to {project_dir}")
+        log.info("⚠️ A system reboot is required for the environment variable to take effect")
+        return True
+    except Exception as e:
+        log.error(f"❌ Failed to set environment variable: {e}")
+        return False
+
+
 def main():
     apply_boot_config()
     create_or_overwrite_bash_aliases()
+    setup_project_environment_variable()
     apply_locale_settings()
 
 

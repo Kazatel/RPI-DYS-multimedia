@@ -27,24 +27,24 @@ terminate_app() {
   local app_name="$1"
   local is_pattern="$2"  # true/false - whether to use -f with pgrep
   local pids
- 
+
   echo "Looking for '$app_name' processes..."
- 
+
   # Get all matching PIDs
   if [ "$is_pattern" = "true" ]; then
     pids=$(pgrep -f "$app_name" 2>/dev/null)
   else
     pids=$(pgrep "$app_name" 2>/dev/null)
   fi
- 
+
   # If no processes found, return early
   if [ -z "$pids" ]; then
     echo "No processes found matching '$app_name'"
     return
   fi
- 
+
   echo "Found processes matching '$app_name': $pids"
- 
+
   # First, try graceful termination
   for pid in $pids; do
     # Skip our own PID and parent PID
@@ -55,17 +55,17 @@ terminate_app() {
       echo "Skipping PID $pid (it's our script or parent)"
     fi
   done
- 
+
   # Wait a bit for processes to exit gracefully
   sleep 2
- 
+
   # Check if processes are still running and force kill if necessary
   if [ "$is_pattern" = "true" ]; then
     pids=$(pgrep -f "$app_name" 2>/dev/null)
   else
     pids=$(pgrep "$app_name" 2>/dev/null)
   fi
- 
+
   if [ -n "$pids" ]; then
     echo "Some processes still running, force killing: $pids"
     for pid in $pids; do
@@ -75,7 +75,7 @@ terminate_app() {
       fi
     done
   fi
-  
+
   # Final verification
   sleep 1
   if [ "$is_pattern" = "true" ]; then
@@ -83,7 +83,7 @@ terminate_app() {
   else
     pids=$(pgrep "$app_name" 2>/dev/null)
   fi
-  
+
   if [ -n "$pids" ]; then
     echo "WARNING: Some processes still running: $pids"
     echo "These may need to be terminated manually"
@@ -95,9 +95,9 @@ terminate_app() {
 # Function to start an application
 start_app() {
   local app_name="$1"
-  
+
   echo "Starting $app_name..."
-  
+
   case "$app_name" in
     kodi)
       kodi >/dev/null 2>&1 &
@@ -115,6 +115,7 @@ start_app() {
         lxsession -s LXDE-pi -e LXDE &
       else
         echo "Starting X session"
+        # Use startx without specifying a user - will run as root when called with sudo
         startx &
       fi
       ;;
@@ -123,7 +124,7 @@ start_app() {
       exit 1
       ;;
   esac
-  
+
   # Check if app launched successfully
   sleep 2
   case "$app_name" in
@@ -154,7 +155,7 @@ start_app() {
 # Main script logic
 if [ "$ACTION" = "kill" ]; then
   echo "=== Terminating $SERVICE ==="
-  
+
   case "$SERVICE" in
     kodi)
       terminate_app "kodi" "false"
@@ -164,7 +165,12 @@ if [ "$ACTION" = "kill" ]; then
       terminate_app "emulationstation" "true"
       ;;
     desktop)
+      # Kill all desktop-related processes
       terminate_app "lxsession" "true"
+      terminate_app "lxpanel" "true"
+      terminate_app "pcmanfm" "true"
+      terminate_app "openbox" "true"
+      terminate_app "Xorg" "true"
       ;;
     *)
       echo "Unknown service: $SERVICE"
@@ -172,11 +178,11 @@ if [ "$ACTION" = "kill" ]; then
       exit 1
       ;;
   esac
-  
+
 elif [ "$ACTION" = "start" ]; then
   echo "=== Starting $SERVICE ==="
   start_app "$SERVICE"
-  
+
 else
   echo "Unknown action: $ACTION"
   echo "Usage: $0 <kill|start> <kodi|emulationstation|desktop>"
