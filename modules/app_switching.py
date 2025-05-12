@@ -12,8 +12,13 @@ from utils.error_handler import handle_error
 from modules.es_config_updater import ensure_es_systems_config
 
 def get_app_switch_path():
-    """Get the path to the app_switch.sh script in the user's bin directory"""
-    return os.path.expanduser("~/bin/app_switch.sh")
+    """Get the path to the app_switch.py script using the DYS_RPI environment variable"""
+    dys_rpi = os.environ.get('DYS_RPI')
+    if dys_rpi:
+        return os.path.join(dys_rpi, "scripts", "app_switch.py")
+    else:
+        # Fallback to the old path if DYS_RPI is not set
+        return os.path.expanduser("~/bin/app_switch.py")
 
 def update_paths():
     """
@@ -197,9 +202,8 @@ def install_services():
 
         # List of scripts to check
         script_files = [
-            "app_switch.sh",
-            "service_manager.sh",
-            "service_manager.py"
+            "app_switch.py",
+            "service_manager.sh"
         ]
 
         # Check if all scripts exist
@@ -221,6 +225,7 @@ def install_services():
                 "/usr/bin/app_switch.sh",
                 "/opt/retropie/app_switch.sh",
                 f"/home/{user}/bin/app_switch.sh",
+                f"/home/{user}/bin/app_switch.py",
                 f"/home/{user}/bin/service_manager.sh",
                 f"/home/{user}/bin/service_manager.py"
             ]
@@ -514,16 +519,16 @@ fi
                 with open(bashrc_path, "r") as f:
                     content = f.read()
 
-                # Check if app_switch.sh is already in .bashrc
-                if "app_switch.sh" in content:
+                # Check if app_switch is already in .bashrc (either .sh or .py)
+                if "app_switch.sh" in content or "app_switch.py" in content:
                     # Update the existing line
                     new_content = []
                     for line in content.splitlines():
-                        if "app_switch.sh" in line and not line.strip().startswith("#"):
+                        if ("app_switch.sh" in line or "app_switch.py" in line) and not line.strip().startswith("#"):
                             # Create a completely new line with the correct path and app name
                             # This ensures consistency regardless of the previous format
                             new_line = f"  python3 ${{DYS_RPI}}/scripts/app_switch.py {boot_app}"
-                            log.info(f"🔄 Updating app_switch.sh line in .bashrc to use {boot_app}")
+                            log.info(f"🔄 Updating app_switch line in .bashrc to use {boot_app}")
                             new_content.append(new_line)
                         else:
                             new_content.append(line)
