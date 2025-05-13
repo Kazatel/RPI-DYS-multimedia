@@ -18,17 +18,10 @@ def get_app_switch_path():
     if dys_rpi:
         return os.path.join(dys_rpi, "scripts", "app_switch.py")
     else:
-        # Fallback to the old path if DYS_RPI is not set
-        return os.path.expanduser("~/bin/app_switch.py")
-
-def update_paths():
-    """
-    No need to update paths since we're using $HOME and os.path.expanduser
-    which automatically resolve to the correct home directory
-    """
-    with log.log_section("Checking paths in components"):
-        log.info("✅ Using $HOME and expanduser for paths - no updates needed")
-        return True
+        # If DYS_RPI is not set, use the absolute path
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.dirname(script_dir)
+        return os.path.join(project_dir, "scripts", "app_switch.py")
 
 @handle_error(exit_on_error=False)
 def install_kodi_addon():
@@ -76,14 +69,10 @@ def install_kodi_addon():
             # Make sure it has proper ownership
             subprocess.run(["chown", f"{user}:{user}", os.path.dirname(kodi_addon_dir)], check=True)
 
-        # Remove existing addon directory if it exists
+        # Check if addon already exists
         if os.path.exists(kodi_addon_dir):
-            log.info(f"Removing existing Kodi addon at {kodi_addon_dir}")
-            try:
-                shutil.rmtree(kodi_addon_dir)
-            except Exception as e:
-                log.error(f"Failed to remove existing Kodi addon: {e}")
-                return False
+            log.info(f"Kodi addon already exists at {kodi_addon_dir}")
+            return True
 
         # Copy the addon to Kodi's addon directory
         try:
@@ -172,9 +161,6 @@ def setup_app_switching(autostart=None):
         if "kodi" in gui_apps:
             install_kodi_addon()
 
-        # Update paths in Kodi addon, desktop shortcuts, and RetroPie ports scripts
-        update_paths()
-
         # Configure autostart
         if not configure_autostart(gui_apps, autostart):
             return False
@@ -193,7 +179,6 @@ def get_gui_apps():
 def install_services():
     """
     Set up app switching scripts using the DYS_RPI environment variable
-    No need to copy scripts to ~/bin anymore
     """
     with log.log_section("Setting up app switching scripts"):
         # Get the script directory
@@ -218,38 +203,9 @@ def install_services():
             os.chmod(script_path, 0o755)
             log.info(f"✅ Made {script_file} executable")
 
-        # Remove any old versions of the script from system locations and ~/bin
-        try:
-            user = config.USER
-            old_locations = [
-                "/usr/local/bin/app_switch.sh",
-                "/usr/bin/app_switch.sh",
-                "/opt/retropie/app_switch.sh",
-                f"/home/{user}/bin/app_switch.sh",
-                f"/home/{user}/bin/app_switch.py",
-                f"/home/{user}/bin/service_manager.sh",
-                f"/home/{user}/bin/service_manager.py"
-            ]
-
-            for old_location in old_locations:
-                if os.path.exists(old_location):
-                    try:
-                        log.info(f"Removing old script from {old_location}")
-                        if old_location.startswith(f"/home/{user}"):
-                            # User's files can be removed directly
-                            os.remove(old_location)
-                        else:
-                            # System files need sudo
-                            subprocess.run(["sudo", "rm", old_location], check=True)
-                    except Exception as e:
-                        log.warning(f"⚠️ Failed to remove old script at {old_location}: {e}")
-
-            log.info("✅ App switching scripts setup completed")
-            log.info("✅ Scripts will be accessed using the DYS_RPI environment variable")
-            return True
-        except Exception as e:
-            log.error(f"❌ Failed to set up app switching scripts: {e}")
-            return False
+        log.info("✅ App switching scripts setup completed")
+        log.info("✅ Scripts will be accessed using the DYS_RPI environment variable")
+        return True
 
 def create_desktop_shortcuts(gui_apps):
     """Create desktop shortcuts for easy switching with custom icons"""
@@ -534,23 +490,10 @@ fi
                 with open(bashrc_path, "r") as f:
                     content = f.read()
 
-                # Check if app_switch is already in .bashrc (either .sh or .py)
-                if "app_switch.sh" in content or "app_switch.py" in content:
-                    # Update the existing line
-                    new_content = []
-                    for line in content.splitlines():
-                        if ("app_switch.sh" in line or "app_switch.py" in line) and not line.strip().startswith("#"):
-                            # Create a completely new line with the correct path and app name
-                            # This ensures consistency regardless of the previous format
-                            new_line = f"  python3 ${{DYS_RPI}}/scripts/app_switch.py {boot_app}"
-                            log.info(f"🔄 Updating app_switch line in .bashrc to use {boot_app}")
-                            new_content.append(new_line)
-                        else:
-                            new_content.append(line)
-
-                    with open(bashrc_path, "w") as f:
-                        f.write("\n".join(new_content))
-                    log.info(f"✅ Updated autostart in {bashrc_path}")
+                # Check if app_switch is already in .bashrc
+                if "app_switch.py" in content:
+                    log.info(f"App switching already configured in {bashrc_path}")
+                    return True
                 else:
                     # Add the autostart line
                     with open(bashrc_path, "a") as f:

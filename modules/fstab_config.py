@@ -1,4 +1,10 @@
-﻿import os
+"""
+FSTAB Configuration Module
+
+This module handles configuration of the /etc/fstab file for mounting disks.
+"""
+
+import os
 import re
 import subprocess
 from datetime import datetime
@@ -10,14 +16,31 @@ FSTAB_PATH = "/etc/fstab"
 FSTAB_MARKER_PREFIX = "# added by script"
 FSTAB_MARKER_RE = re.compile(rf"^{re.escape(FSTAB_MARKER_PREFIX)}.*$")
 
+
 def get_blkid_data():
+    """
+    Get block device information using blkid command
+    
+    Returns:
+        list: Lines of output from blkid command
+    """
     try:
         blkid_output = subprocess.check_output(["blkid"], text=True)
         return blkid_output.strip().splitlines()
     except subprocess.CalledProcessError:
         return []
 
+
 def parse_blkid_output(lines):
+    """
+    Parse the output of blkid command
+    
+    Args:
+        lines (list): Lines of output from blkid command
+        
+    Returns:
+        dict: Dictionary of disk information keyed by label
+    """
     disks_info = {}
     for line in lines:
         match = re.match(r'^(/dev/\S+): (.+)$', line)
@@ -34,8 +57,17 @@ def parse_blkid_output(lines):
             }
     return disks_info
 
-def update_fstab_with_disks(auto_update_packages=True):
 
+def update_fstab_with_disks(auto_update_packages=True):
+    """
+    Update /etc/fstab with disk mount information from config
+    
+    Args:
+        auto_update_packages (bool): Whether to automatically update packages
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
     log.info("⚙️ Preparing to update /etc/fstab with external disks...")
     blkid_lines = get_blkid_data()
     disks_by_label = parse_blkid_output(blkid_lines)
@@ -81,7 +113,7 @@ def update_fstab_with_disks(auto_update_packages=True):
 
     if not os.path.exists(FSTAB_PATH):
         log.error(f"❌ {FSTAB_PATH} not found.")
-        return
+        return False
 
     with open(FSTAB_PATH, "r") as f:
         lines = f.readlines()
@@ -104,5 +136,26 @@ def update_fstab_with_disks(auto_update_packages=True):
         with open(FSTAB_PATH, "w") as f:
             f.write("\n".join(updated_lines) + "\n")
         log.info("✅ /etc/fstab updated successfully.")
+        return True
     except Exception as e:
         log.error(f"❌ Failed to update {FSTAB_PATH}: {e}")
+        return False
+
+
+def main():
+    """Main configuration function for fstab"""
+    log.info("⚙️ Configuring fstab...")
+    
+    # Update fstab with disks from config
+    success = update_fstab_with_disks()
+    
+    if success:
+        log.info("✅ FSTAB configuration complete")
+    else:
+        log.error("❌ FSTAB configuration failed")
+    
+    return success
+
+
+if __name__ == "__main__":
+    main()

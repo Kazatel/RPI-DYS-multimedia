@@ -17,13 +17,13 @@ from utils.os_utils import (
     is_running_as_root,
     reboot_countdown
 )
-from modules.system_configuration import (
+from modules.system_config import (
     apply_locale_settings,
     apply_boot_config,
     create_or_overwrite_bash_aliases,
     update_environment_variable_menu
 )
-from modules.fstab_configurator import update_fstab_with_disks
+from modules.fstab_config import update_fstab_with_disks
 
 # Import config validation if available
 try:
@@ -503,7 +503,7 @@ def main():
         setup_moonlight()
     elif args.command == "env-var":
         if hasattr(args, 'path') and args.path:
-            from modules.system_configuration import setup_project_environment_variable
+            from modules.system_config import setup_project_environment_variable
             setup_project_environment_variable(args.path)
         else:
             update_environment_variable_menu()
