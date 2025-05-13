@@ -113,15 +113,28 @@ def configure_selected_apps(force_apps=None):
 
         if force_apps or should_configure:
             try:
-                module_path = f"{MODULES_DIR}.{app_name}_install"
-                module = importlib.import_module(module_path)
+                # First try to import the dedicated config module
+                config_module_path = f"{MODULES_DIR}.{app_name}_config"
+                try:
+                    config_module = importlib.import_module(config_module_path)
+                    print(f"\n🔧 Running configuration for: {app_name.upper()} (user: {user})")
 
-                print(f"\n🔧 Running configuration for: {app_name.upper()} (user: {user})")
+                    if hasattr(config_module, "main"):
+                        config_module.main()
+                    else:
+                        print(f"⚠️  No main() function found in {config_module_path}.")
+                except ModuleNotFoundError:
+                    # Fall back to the install module if config module doesn't exist
+                    install_module_path = f"{MODULES_DIR}.{app_name}_install"
+                    install_module = importlib.import_module(install_module_path)
 
-                if hasattr(module, "main_configure"):
-                    module.main_configure()
-                else:
-                    print(f"⚠️  No main_configure() function found in {module_path}.")
+                    print(f"\n🔧 Running configuration for: {app_name.upper()} (user: {user})")
+                    print(f"⚠️  Using legacy install module for configuration")
+
+                    if hasattr(install_module, "main_configure"):
+                        install_module.main_configure()
+                    else:
+                        print(f"⚠️  No main_configure() function found in {install_module_path}.")
             except ModuleNotFoundError as e:
                 print(f"❌ Module not found for {app_name}: {e}")
 
@@ -245,11 +258,18 @@ def moonlight_submenu():
                 print(f"❌ Error during Moonlight installation: {e}")
         elif choice == "2":
             try:
-                from modules import moonlight_install
-                moonlight_install.main_configure()
-                print("✅ Moonlight configuration completed.")
+                # Try to use the dedicated config module first
+                try:
+                    from modules import moonlight_config
+                    moonlight_config.main()
+                    print("✅ Moonlight configuration completed.")
+                except ImportError:
+                    # Fall back to the install module if config module doesn't exist
+                    from modules import moonlight_install
+                    moonlight_install.main_configure()
+                    print("✅ Moonlight configuration completed (using legacy module).")
             except ImportError as e:
-                print(f"❌ Failed to import moonlight_install module: {e}")
+                print(f"❌ Failed to import Moonlight module: {e}")
             except Exception as e:
                 print(f"❌ Error during Moonlight configuration: {e}")
         elif choice == "3":
