@@ -114,6 +114,13 @@ alias ll='ls -l'
 alias la='ls -a'
 alias lah='ls -lah'
 alias l='ls -CF'
+
+# Bluetooth gamepad connection aliases - only created if DYS_RPI is set
+if [ -n "${DYS_RPI}" ]; then
+    alias btc='python3 ${DYS_RPI}/scripts/bluetooth_manager.py connect --background'
+    alias bts='python3 ${DYS_RPI}/scripts/bluetooth_manager.py status'
+    alias btl='python3 ${DYS_RPI}/scripts/bluetooth_manager.py list'
+fi
 """
 
 # Disk mount configuration (used to generate /etc/fstab entries)
