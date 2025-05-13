@@ -2,7 +2,7 @@
 Name=Start Kodi
 Comment=Switch to Kodi Media Center
 Exec=python3 ${DYS_RPI}/scripts/app_switch.py kodi
-Icon=/home/${USER}/Pictures/icons/kodi.png
+Icon=${DYS_RPI}/media/kodi.png
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;Player;TV;

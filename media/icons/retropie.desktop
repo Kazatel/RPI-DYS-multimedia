@@ -2,7 +2,7 @@
 Name=Start RetroPie
 Comment=Switch to RetroPie Emulation Platform
 Exec=python3 ${DYS_RPI}/scripts/app_switch.py retropie
-Icon=/home/${USER}/Pictures/icons/retropie.png
+Icon=${DYS_RPI}/media/retropie.png
 Terminal=false
 Type=Application
 Categories=Game;

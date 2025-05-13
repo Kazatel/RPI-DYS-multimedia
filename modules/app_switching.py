@@ -257,37 +257,23 @@ def create_desktop_shortcuts(gui_apps):
         # Get the script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # Create icons directory if it doesn't exist
+        # Get user and project directory
         user = config.USER
-        icons_dir = f"/home/{user}/Pictures/icons"
-        os.makedirs(icons_dir, exist_ok=True)
-
-        # Set proper ownership for the icons directory
-        try:
-            subprocess.run(["chown", f"{user}:{user}", icons_dir], check=True)
-            log.info(f"✅ Created icons directory at {icons_dir}")
-        except Exception as e:
-            log.warning(f"⚠️ Failed to set ownership for icons directory: {e}")
-
-        # Copy icons from project media directory to user's icons directory
         project_dir = os.path.dirname(script_dir)
         media_dir = os.path.join(project_dir, "media")
 
-        if os.path.exists(media_dir):
-            for app_name in gui_apps.keys():
-                icon_file = f"{app_name}.png"
-                source_icon = os.path.join(media_dir, icon_file)
-                dest_icon = os.path.join(icons_dir, icon_file)
-
-                if os.path.exists(source_icon):
-                    try:
-                        shutil.copy2(source_icon, dest_icon)
-                        subprocess.run(["chown", f"{user}:{user}", dest_icon], check=True)
-                        log.info(f"✅ Copied icon for {app_name} to {icons_dir}")
-                    except Exception as e:
-                        log.warning(f"⚠️ Failed to copy icon for {app_name}: {e}")
-        else:
+        # Verify that media directory exists
+        if not os.path.exists(media_dir):
             log.warning(f"⚠️ Media directory not found at {media_dir}")
+
+        # Verify that icons exist in the media directory
+        for app_name in gui_apps.keys():
+            icon_file = f"{app_name}.png"
+            icon_path = os.path.join(media_dir, icon_file)
+            if not os.path.exists(icon_path):
+                log.warning(f"⚠️ Icon for {app_name} not found at {icon_path}")
+            else:
+                log.info(f"✅ Found icon for {app_name} at {icon_path}")
 
         # Create desktop files in system, user, and root locations
         applications_dir = "/usr/share/applications"  # System-wide applications
@@ -305,20 +291,26 @@ def create_desktop_shortcuts(gui_apps):
         except Exception as e:
             log.warning(f"⚠️ Failed to create root desktop directory: {e}")
 
-        for app_name, app_config in gui_apps.items():
-            display_name = app_config.get("display_name", app_name.capitalize())
-            desktop_file = f"{app_name}.desktop"
+        # Get the path to the desktop files in media/icons
+        desktop_files_dir = os.path.join(project_dir, "media", "icons")
 
-            # Create desktop file content using DYS_RPI environment variable
-            desktop_content = f"""[Desktop Entry]
-Name=Start {display_name}
-Comment=Switch to {display_name}
-Exec=python3 ${DYS_RPI}/scripts/app_switch.py {app_name}
-Icon=$HOME/Pictures/icons/{app_name}.png
-Terminal=false
-Type=Application
-Categories=AudioVideo;Video;Player;TV;
-"""
+        for app_name in gui_apps.keys():
+            desktop_file = f"{app_name}.desktop"
+            source_desktop_file = os.path.join(desktop_files_dir, desktop_file)
+
+            # Check if the desktop file exists in media/icons
+            if not os.path.exists(source_desktop_file):
+                log.warning(f"⚠️ Desktop file for {app_name} not found at {source_desktop_file}")
+                continue
+
+            # Read the desktop file content
+            try:
+                with open(source_desktop_file, 'r') as f:
+                    desktop_content = f.read()
+                log.info(f"✅ Found desktop file for {app_name} at {source_desktop_file}")
+            except Exception as e:
+                log.error(f"❌ Failed to read desktop file for {app_name}: {e}")
+                continue
 
             # 1. Create in system applications directory (requires root)
             system_destination = os.path.join(applications_dir, desktop_file)
@@ -355,18 +347,10 @@ Categories=AudioVideo;Video;Player;TV;
                 # Get the absolute path to the project directory
                 script_dir = os.path.dirname(os.path.abspath(__file__))
                 project_dir = os.path.dirname(script_dir)
-                app_switch_path = os.path.join(project_dir, "scripts", "app_switch.py")
 
-                # Create desktop file content with absolute paths for root
-                root_desktop_content = f"""[Desktop Entry]
-Name=Start {display_name}
-Comment=Switch to {display_name}
-Exec=python3 {app_switch_path} {app_name}
-Icon=/root/Pictures/icons/{app_name}.png
-Terminal=false
-Type=Application
-Categories=AudioVideo;Video;Player;TV;
-"""
+                # Create a modified version of the desktop file with absolute paths for root
+                # Replace ${DYS_RPI} with the actual project directory path
+                root_desktop_content = desktop_content.replace("${DYS_RPI}", project_dir)
 
                 # We need to use sudo to write to root's desktop
                 with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
@@ -381,16 +365,6 @@ Categories=AudioVideo;Video;Player;TV;
 
                 # Set proper permissions
                 subprocess.run(["sudo", "chmod", "755", root_destination], check=True)
-
-                # Also copy the icon to root's Pictures/icons directory
-                root_icons_dir = "/root/Pictures/icons"
-                subprocess.run(["sudo", "mkdir", "-p", root_icons_dir], check=True)
-
-                source_icon = os.path.join(icons_dir, f"{app_name}.png")
-                if os.path.exists(source_icon):
-                    root_icon_path = os.path.join(root_icons_dir, f"{app_name}.png")
-                    subprocess.run(["sudo", "cp", source_icon, root_icon_path], check=True)
-                    log.info(f"Copied icon for {app_name} to root's icons directory")
 
                 log.info(f"Created root desktop file at {root_destination}")
             except Exception as e:
@@ -466,8 +440,10 @@ def integrate_with_retropie(gui_apps):
         # Get the user from config
         user = config.USER
 
-        # Define the icons directory path
-        icons_dir = f"/home/{user}/Pictures/icons"
+        # Get the project directory for icons
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.dirname(script_dir)
+        media_dir = os.path.join(project_dir, "media")
 
         # Check if RetroPie is installed
         retropie_roms_path = f"/home/{user}/RetroPie/roms"
@@ -506,41 +482,23 @@ python3 ${{DYS_RPI}}/scripts/app_switch.py {app_name}
                 # Set the correct ownership
                 subprocess.run(["chown", f"{user}:{user}", script_path], check=True)
 
-                # Copy the custom icon to RetroPie's images directory if it exists
-                custom_icon_path = os.path.join(icons_dir, f"{app_name}.png")
-                if os.path.exists(custom_icon_path):
+                # Copy the icon from the project media directory to RetroPie's images directory
+                icon_path = os.path.join(media_dir, f"{app_name}.png")
+                if os.path.exists(icon_path):
                     # RetroPie looks for images in several locations, we'll use the ports images directory
                     retropie_images_dir = os.path.join("/opt/retropie/configs/all/emulationstation/downloaded_images/ports")
                     os.makedirs(retropie_images_dir, exist_ok=True)
 
                     # Copy the icon with the same name as the script (without .sh)
                     icon_dest = os.path.join(retropie_images_dir, f"Launch {display_name}.png")
-                    shutil.copy2(custom_icon_path, icon_dest)
+                    shutil.copy2(icon_path, icon_dest)
 
                     # Set the correct ownership
                     subprocess.run(["chown", f"{user}:{user}", icon_dest], check=True)
 
-                    log.info(f"Added custom icon for {display_name} in RetroPie")
+                    log.info(f"Added custom icon for {display_name} in RetroPie (from project media)")
                 else:
-                    # If icon doesn't exist in user's icons directory, try to find it in the project media directory
-                    script_dir = os.path.dirname(os.path.abspath(__file__))
-                    project_dir = os.path.dirname(script_dir)
-                    media_dir = os.path.join(project_dir, "media")
-                    project_icon_path = os.path.join(media_dir, f"{app_name}.png")
-
-                    if os.path.exists(project_icon_path):
-                        # RetroPie looks for images in several locations, we'll use the ports images directory
-                        retropie_images_dir = os.path.join("/opt/retropie/configs/all/emulationstation/downloaded_images/ports")
-                        os.makedirs(retropie_images_dir, exist_ok=True)
-
-                        # Copy the icon with the same name as the script (without .sh)
-                        icon_dest = os.path.join(retropie_images_dir, f"Launch {display_name}.png")
-                        shutil.copy2(project_icon_path, icon_dest)
-
-                        # Set the correct ownership
-                        subprocess.run(["chown", f"{user}:{user}", icon_dest], check=True)
-
-                        log.info(f"Added custom icon for {display_name} in RetroPie (from project media)")
+                    log.warning(f"⚠️ Icon for {app_name} not found at {icon_path}")
 
                 log.info(f"Added {display_name} to RetroPie ports")
             except Exception as e:
