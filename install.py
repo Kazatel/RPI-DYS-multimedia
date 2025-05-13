@@ -20,7 +20,8 @@ from utils.os_utils import (
 from modules.system_configuration import (
     apply_locale_settings,
     apply_boot_config,
-    create_or_overwrite_bash_aliases
+    create_or_overwrite_bash_aliases,
+    update_environment_variable_menu
 )
 from modules.fstab_configurator import update_fstab_with_disks
 
@@ -334,6 +335,7 @@ def advanced_menu_loop():
         print("9) Set up app switching")
         print("10) Bluetooth gamepad setup")
         print("11) Moonlight streaming setup")
+        print("12) Update DYS_RPI environment variable")
         print("0) 🔙 Back to Main Menu")
 
         choice = input("\nEnter your choice: ").strip()
@@ -359,6 +361,8 @@ def advanced_menu_loop():
             setup_bluetooth()
         elif choice == "11":
             setup_moonlight()
+        elif choice == "12":
+            update_environment_variable_menu()
         elif choice == "0":
             return
         else:
@@ -380,6 +384,8 @@ Examples:
   sudo python install.py app-switching       # Set up app switching
   sudo python install.py bluetooth pair      # Run Bluetooth pairing mode
   sudo python install.py moonlight           # Set up Moonlight streaming
+  sudo python install.py env-var             # Update DYS_RPI environment variable
+  sudo python install.py env-var --path=/opt/rpi-dys  # Set custom path for DYS_RPI
   sudo python install.py reboot              # Reboot the system
         """
     )
@@ -411,6 +417,10 @@ Examples:
 
     # Moonlight
     subparsers.add_parser("moonlight", help="Set up Moonlight streaming")
+
+    # Environment variable
+    env_parser = subparsers.add_parser("env-var", help="Update DYS_RPI environment variable")
+    env_parser.add_argument("--path", help="Custom path to set for DYS_RPI (optional)")
 
     # Reboot
     subparsers.add_parser("reboot", help="Reboot the system")
@@ -471,6 +481,12 @@ def main():
             setup_bluetooth()
     elif args.command == "moonlight":
         setup_moonlight()
+    elif args.command == "env-var":
+        if hasattr(args, 'path') and args.path:
+            from modules.system_configuration import setup_project_environment_variable
+            setup_project_environment_variable(args.path)
+        else:
+            update_environment_variable_menu()
     elif args.command == "reboot":
         reboot_system()
     else:

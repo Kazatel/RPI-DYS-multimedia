@@ -78,16 +78,28 @@ def create_or_overwrite_bash_aliases():
         log.error(f"❌ Error creating or overwriting {bash_aliases_path}: {e}")
 
 
-def setup_project_environment_variable():
+def setup_project_environment_variable(custom_path=None):
     """
     Set up a system-wide environment variable DYS_RPI pointing to the project directory
     This allows all scripts to reference the project directory directly
+
+    Args:
+        custom_path: Optional custom path to use instead of auto-detecting the project directory
+
+    Returns:
+        bool: True if successful, False otherwise
     """
     log.info("🔧 Setting up project environment variable DYS_RPI...")
 
-    # Get the absolute path to the project directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_dir = os.path.dirname(script_dir)
+    # Get the path to use
+    if custom_path:
+        project_dir = os.path.abspath(custom_path)
+        log.info(f"Using custom path: {project_dir}")
+    else:
+        # Auto-detect the project directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.dirname(script_dir)
+        log.info(f"Auto-detected project directory: {project_dir}")
 
     # Environment variable name
     env_var_name = "DYS_RPI"
@@ -125,6 +137,79 @@ def setup_project_environment_variable():
         return True
     except Exception as e:
         log.error(f"❌ Failed to set environment variable: {e}")
+        return False
+
+
+def update_environment_variable_menu():
+    """
+    Interactive menu function for updating the DYS_RPI environment variable
+    Can be called directly from the advanced menu
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    print("\n=== Update DYS_RPI Environment Variable ===")
+
+    # Get the current value if it exists
+    current_value = None
+    try:
+        with open("/etc/environment", "r") as f:
+            for line in f:
+                if line.startswith("DYS_RPI="):
+                    current_value = line.strip().split('=', 1)[1].strip('"')
+                    break
+    except Exception:
+        pass
+
+    if current_value:
+        print(f"Current value: {current_value}")
+    else:
+        print("DYS_RPI is not currently set")
+
+    # Ask for the new path
+    print("\nOptions:")
+    print("1) Auto-detect project directory")
+    print("2) Enter custom path")
+    print("0) Cancel")
+
+    choice = input("\nEnter your choice: ").strip()
+
+    if choice == "1":
+        # Auto-detect
+        success = setup_project_environment_variable()
+        if success:
+            print("✅ DYS_RPI environment variable updated successfully")
+            print("⚠️ A system reboot is required for the change to take effect")
+        else:
+            print("❌ Failed to update DYS_RPI environment variable")
+        return success
+    elif choice == "2":
+        # Custom path
+        custom_path = input("Enter the full path to the project directory: ").strip()
+        if not custom_path:
+            print("❌ No path entered, operation cancelled")
+            return False
+
+        # Validate the path
+        if not os.path.exists(custom_path):
+            print(f"⚠️ Warning: The path {custom_path} does not exist")
+            confirm = input("Do you want to continue anyway? (y/n): ").strip().lower()
+            if confirm != 'y':
+                print("Operation cancelled")
+                return False
+
+        success = setup_project_environment_variable(custom_path)
+        if success:
+            print("✅ DYS_RPI environment variable updated successfully")
+            print("⚠️ A system reboot is required for the change to take effect")
+        else:
+            print("❌ Failed to update DYS_RPI environment variable")
+        return success
+    elif choice == "0":
+        print("Operation cancelled")
+        return False
+    else:
+        print("❌ Invalid option")
         return False
 
 
