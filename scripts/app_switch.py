@@ -147,7 +147,7 @@ def switch_to_app(app):
         log_error(f"Unknown application: {app}")
         log_info(f"Valid options are: {', '.join(APP_TO_SERVICE.keys())}")
         return False
-    
+
     service = APP_TO_SERVICE[app]
     log_info(f"Switching to {app} (service: {service})...")
 
@@ -172,11 +172,16 @@ def switch_to_app(app):
 
 def main():
     """Main entry point"""
+    # Check for legacy usage pattern (app name as first argument)
+    if len(sys.argv) == 2 and sys.argv[1] in APP_TO_SERVICE:
+        # Legacy usage: python app_switch.py kodi
+        return 0 if switch_to_app(sys.argv[1]) else 1
+
     parser = argparse.ArgumentParser(description="App Switching - Control application services")
-    
+
     # Add app argument for direct app switching
     parser.add_argument("app", nargs="?", help="Application to switch to (kodi, retropie, emulationstation, desktop)")
-    
+
     # Add subcommands for more advanced usage
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 

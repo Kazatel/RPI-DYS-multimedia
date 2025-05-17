@@ -117,7 +117,7 @@ alias l='ls -CF'
 
 # Bluetooth gamepad connection aliases - only created if DYS_RPI is set
 if [ -n "${DYS_RPI}" ]; then
-    alias btc='python3 ${DYS_RPI}/scripts/bluetooth_manager.py connect --background'
+    alias btc='python3 ${DYS_RPI}/scripts/bluetooth_manager.py connect'
     alias bts='python3 ${DYS_RPI}/scripts/bluetooth_manager.py status'
     alias btl='python3 ${DYS_RPI}/scripts/bluetooth_manager.py list'
 fi
