@@ -10,7 +10,6 @@ import tempfile
 import config
 from utils.logger import logger_instance as log
 from utils.error_handler import handle_error
-from modules.es_config_updater import ensure_es_systems_config
 
 def get_app_switch_path():
     """Get the path to the app_switch.py script using the DYS_RPI environment variable"""
@@ -206,6 +205,7 @@ def install_services():
         log.info("✅ App switching scripts setup completed")
         log.info("✅ Scripts will be accessed using the DYS_RPI environment variable")
         return True
+
 
 def create_desktop_shortcuts(gui_apps):
     """Create desktop shortcuts for easy switching with custom icons"""
