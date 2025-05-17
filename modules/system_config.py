@@ -103,10 +103,10 @@ def setup_project_environment_variable(custom_path=None):
     """
     Set up a system-wide environment variable DYS_RPI pointing to the project directory
     This allows all scripts to reference the project directory directly
-    
+
     Args:
         custom_path: Optional custom path to use instead of auto-detecting the project directory
-    
+
     Returns:
         bool: True if successful, False otherwise
     """
@@ -122,14 +122,26 @@ def setup_project_environment_variable(custom_path=None):
         project_dir = os.path.dirname(script_dir)
         log.info(f"Auto-detected project directory: {project_dir}")
 
+    # Verify the path exists
+    if not os.path.exists(project_dir):
+        log.warning(f"⚠️ Warning: The path {project_dir} does not exist")
+        # Continue anyway, but log the warning
+
     # Environment variable name
     env_var_name = "DYS_RPI"
     env_file_path = "/etc/environment"
+
+    # Check if we have write access to /etc/environment
+    if not os.access(env_file_path, os.W_OK):
+        log.error(f"❌ No write access to {env_file_path}. Make sure you're running with sudo.")
+        # Try using sudo to write the file
+        return _setup_environment_variable_with_sudo(env_var_name, project_dir, env_file_path)
 
     # Read current /etc/environment
     try:
         with open(env_file_path, "r") as f:
             current_content = f.read()
+        log.info(f"Successfully read {env_file_path}")
     except Exception as e:
         log.error(f"❌ Failed to read {env_file_path}: {e}")
         current_content = ""
@@ -158,6 +170,56 @@ def setup_project_environment_variable(custom_path=None):
         return True
     except Exception as e:
         log.error(f"❌ Failed to set environment variable: {e}")
+        # Try using sudo as a fallback
+        return _setup_environment_variable_with_sudo(env_var_name, project_dir, env_file_path)
+
+
+def _setup_environment_variable_with_sudo(env_var_name, project_dir, env_file_path):
+    """
+    Helper function to set up environment variable using sudo
+
+    Args:
+        env_var_name: Name of the environment variable
+        project_dir: Path to set the variable to
+        env_file_path: Path to the environment file
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    log.info("Attempting to set environment variable using sudo...")
+
+    # Create a temporary file with the environment variable
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+        temp_path = temp_file.name
+        temp_file.write(f'{env_var_name}="{project_dir}"\n')
+
+    try:
+        # Use sudo to append the temporary file to /etc/environment
+        import subprocess
+        result = subprocess.run(
+            ["sudo", "bash", "-c", f"cat {temp_path} > {env_file_path}"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        os.unlink(temp_path)  # Remove the temporary file
+
+        log.info(f"✅ Successfully set {env_var_name} to {project_dir} using sudo")
+        log.info("⚠️ A system reboot is required for the environment variable to take effect")
+        return True
+    except subprocess.CalledProcessError as e:
+        log.error(f"❌ Failed to set environment variable using sudo: {e}")
+        log.error(f"Stdout: {e.stdout}")
+        log.error(f"Stderr: {e.stderr}")
+        os.unlink(temp_path)  # Remove the temporary file
+        return False
+    except Exception as e:
+        log.error(f"❌ Unexpected error when setting environment variable using sudo: {e}")
+        try:
+            os.unlink(temp_path)  # Remove the temporary file
+        except:
+            pass
         return False
 
 
@@ -165,12 +227,12 @@ def update_environment_variable_menu():
     """
     Interactive menu function for updating the DYS_RPI environment variable
     Can be called directly from the advanced menu
-    
+
     Returns:
         bool: True if successful, False otherwise
     """
     print("\n=== Update DYS_RPI Environment Variable ===")
-    
+
     # Get the current value if it exists
     current_value = None
     try:
@@ -181,20 +243,20 @@ def update_environment_variable_menu():
                     break
     except Exception:
         pass
-    
+
     if current_value:
         print(f"Current value: {current_value}")
     else:
         print("DYS_RPI is not currently set")
-    
+
     # Ask for the new path
     print("\nOptions:")
     print("1) Auto-detect project directory")
     print("2) Enter custom path")
     print("0) Cancel")
-    
+
     choice = input("\nEnter your choice: ").strip()
-    
+
     if choice == "1":
         # Auto-detect
         success = setup_project_environment_variable()
@@ -210,7 +272,7 @@ def update_environment_variable_menu():
         if not custom_path:
             print("❌ No path entered, operation cancelled")
             return False
-        
+
         # Validate the path
         if not os.path.exists(custom_path):
             print(f"⚠️ Warning: The path {custom_path} does not exist")
@@ -218,7 +280,7 @@ def update_environment_variable_menu():
             if confirm != 'y':
                 print("Operation cancelled")
                 return False
-        
+
         success = setup_project_environment_variable(custom_path)
         if success:
             print("✅ DYS_RPI environment variable updated successfully")
@@ -237,19 +299,19 @@ def update_environment_variable_menu():
 def main():
     """Main configuration function for system settings"""
     log.info("⚙️ Configuring system settings...")
-    
+
     # Apply boot configuration
     apply_boot_config()
-    
+
     # Create or overwrite bash aliases
     create_or_overwrite_bash_aliases()
-    
+
     # Set up project environment variable
     setup_project_environment_variable()
-    
+
     # Apply locale settings
     apply_locale_settings()
-    
+
     log.info("✅ System configuration complete")
     return True
 
