@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Start Kodi
 Comment=Switch to Kodi Media Center
-Exec=sudo python3 ${DYS_RPI}/scripts/app_switch.py kodi
+Exec=python3 ${DYS_RPI}/scripts/app_switch.py kodi
 Icon=${DYS_RPI}/media/kodi.png
 Terminal=false
 Type=Application
