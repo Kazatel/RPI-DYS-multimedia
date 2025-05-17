@@ -18,10 +18,11 @@ from utils.os_utils import (
     reboot_countdown
 )
 from modules.system_config import (
+    main as system_config_main,
+    update_environment_variable_menu,
     apply_locale_settings,
     apply_boot_config,
-    create_or_overwrite_bash_aliases,
-    update_environment_variable_menu
+    create_or_overwrite_bash_aliases
 )
 from modules.fstab_config import update_fstab_with_disks
 
@@ -71,10 +72,14 @@ def ensure_supported_pi_environment():
 def system_setup():
     ensure_supported_pi_environment()
     print("\n⚙️  Applying system configurations...")
-    apply_boot_config()
-    create_or_overwrite_bash_aliases()
+
+    # Call the main function from system_config.py
+    system_config_main()
+
+    # Update fstab with disks
     update_fstab_with_disks()
-    # apply_locale_settings()  # Optional depending on setup
+
+    # Prompt for reboot
     reboot_countdown(10)
 
 
