@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
-App Switching Script - Unified replacement for app_switch.sh and service_manager.py
-Controls which user runs which tasks for application switching
-This script is designed to be independent of the project structure
+Modified app_switch.py that can survive desktop environment termination
 """
 
 import os
@@ -10,13 +8,20 @@ import sys
 import subprocess
 import argparse
 import getpass
+import time
 
 # Simple print function for logging
 def log_info(message):
     print(f"INFO: {message}")
+    # Also log to a file for debugging desktop launches
+    with open("/tmp/app_switch_log.txt", "a") as f:
+        f.write(f"INFO: {message}\n")
 
 def log_error(message):
     print(f"ERROR: {message}", file=sys.stderr)
+    # Also log to a file for debugging desktop launches
+    with open("/tmp/app_switch_log.txt", "a") as f:
+        f.write(f"ERROR: {message}\n")
 
 # Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -163,8 +168,24 @@ def switch_to_app(app):
         log_error(f"Unknown service: {service}")
         return False
 
+    # Get list of services to kill
+    to_kill = services_to_kill[service]
+    
+    # Special handling for desktop - fork before killing desktop
+    if "desktop" in to_kill:
+        log_info("Desktop needs to be killed - forking to survive desktop termination")
+        # Fork the process if we're killing the desktop
+        if os.fork() != 0:
+            # Parent process just exits successfully
+            log_info("Parent process exiting, child will continue...")
+            return True
+        
+        # Child process continues after a brief pause to ensure parent is gone
+        time.sleep(1)
+        log_info("Child process continuing after fork...")
+
     # Kill other services
-    for other_service in services_to_kill[service]:
+    for other_service in to_kill:
         kill_service(other_service)
 
     # Start the requested service
@@ -172,6 +193,13 @@ def switch_to_app(app):
 
 def main():
     """Main entry point"""
+    # Write a timestamp to the log
+    with open("/tmp/app_switch_log.txt", "a") as f:
+        f.write(f"\n--- New app_switch.py run at {time.ctime()} ---\n")
+        f.write(f"Args: {sys.argv}\n")
+        f.write(f"User: {DEFAULT_USER}\n")
+        f.write(f"Working directory: {os.getcwd()}\n")
+    
     # Check for legacy usage pattern (app name as first argument)
     if len(sys.argv) == 2 and sys.argv[1] in APP_TO_SERVICE:
         # Legacy usage: python app_switch.py kodi
