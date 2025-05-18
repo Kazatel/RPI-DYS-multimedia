@@ -333,86 +333,16 @@ def pair_device(mac, timeout=30):
     return paired and trusted and connected
 
 
-def connect_gamepad(name, timeout=30, background=False, log_file=None):
+def connect_gamepad(name, timeout=30):
     """
     Connect a gamepad from config with proper timeout handling
 
     Args:
         name: Name of the gamepad in config.GAMEPADS
         timeout: Timeout in seconds for connection attempts
-        background: If True, run in background mode (detach from terminal)
-        log_file: Path to log file for background mode
 
     Returns:
         True if successful, False otherwise
-    """
-    # If background mode is requested, fork the process
-    if background:
-        # Default log file if none provided
-        if not log_file:
-            log_file = os.path.expanduser(f"~/bluetooth_connect_{name}.log")
-
-        try:
-            # Fork the process
-            pid = os.fork()
-            if pid > 0:
-                # Parent process returns immediately
-                print(f"🔄 Started background connection process for '{name}' (PID: {pid})")
-                print(f"📝 Log file: {log_file}")
-                return True
-        except OSError as e:
-            print(f"❌ Failed to start background process: {e}")
-            return False
-
-        # Child process continues
-        try:
-            # Redirect stdout and stderr to log file
-            with open(log_file, "w") as f:
-                # Save original stdout/stderr
-                original_stdout = sys.stdout
-                original_stderr = sys.stderr
-
-                # Redirect to log file
-                sys.stdout = f
-                sys.stderr = f
-
-                # Timestamp for log
-                print(f"=== Bluetooth Connection Log - {time.strftime('%Y-%m-%d %H:%M:%S')} ===")
-                print(f"Connecting to gamepad '{name}' in background mode")
-
-                # Detach from parent process
-                os.setsid()
-
-                # Close input/output/error file descriptors
-                os.close(0)
-                os.close(1)
-                os.close(2)
-
-                # Perform the actual connection
-                result = _connect_gamepad_internal(name, timeout)
-
-                # Log the result
-                if result:
-                    print(f"✅ Successfully connected to gamepad '{name}'")
-                else:
-                    print(f"❌ Failed to connect to gamepad '{name}'")
-
-                # Exit the child process
-                os._exit(0 if result else 1)
-        except Exception as e:
-            # If we get an exception in the child process, log it and exit
-            with open(log_file, "a") as f:
-                f.write(f"❌ Exception in background process: {e}\n")
-            os._exit(1)
-
-    # If not in background mode, just call the internal function
-    return _connect_gamepad_internal(name, timeout)
-
-
-def _connect_gamepad_internal(name, timeout=30):
-    """
-    Internal function to connect a gamepad
-    This is called by connect_gamepad in both foreground and background modes
     """
     mac = config.GAMEPADS.get(name)
     if not mac:
@@ -554,15 +484,119 @@ def list_gamepads():
         print(f"{name}\t\t{mac}\t\t{status}")
 
 
+def bconnect_gamepad(name, timeout=30):
+    """
+    Connect to a gamepad using direct bluetoothctl command with here-document
+    This approach works well with SSH remote sessions
+
+    Args:
+        name: Name of the gamepad in config.GAMEPADS
+        timeout: Timeout in seconds for the connection attempt
+
+    Returns:
+        True if the command was executed successfully, False otherwise
+    """
+    mac = config.GAMEPADS.get(name)
+    if not mac:
+        print(f"❌ Gamepad '{name}' not found in config.")
+        return False
+
+    print(f"🎮 Connecting to gamepad '{name}' ({mac}) using direct bluetoothctl approach...")
+
+    # Create a temporary script file
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.sh') as script_file:
+        script_path = script_file.name
+
+        # Write the script content
+        script_file.write(f"""#!/bin/bash
+# Bluetooth connection script with timeout
+(
+    # Run bluetoothctl with here-document
+    bluetoothctl << EOF
+power on
+connect {mac}
+exit
+EOF
+) &
+
+# Store the PID of the background process
+BG_PID=$!
+
+# Wait for the process with timeout
+TIMEOUT={timeout}
+for ((i=1; i<=$TIMEOUT; i++)); do
+    if ! kill -0 $BG_PID 2>/dev/null; then
+        # Process has completed
+        wait $BG_PID
+        EXIT_CODE=$?
+        echo "✅ Bluetooth connection process completed with exit code: $EXIT_CODE"
+        exit $EXIT_CODE
+    fi
+    sleep 1
+    echo "⏳ Waiting for connection... ($i/$TIMEOUT)"
+done
+
+# If we get here, the process timed out
+echo "⚠️ Connection attempt timed out after $TIMEOUT seconds"
+kill $BG_PID 2>/dev/null
+exit 1
+""")
+
+    # Make the script executable
+    os.chmod(script_path, 0o755)
+
+    try:
+        # Run the script in the background
+        print(f"🔄 Starting connection process in background...")
+        process = subprocess.Popen(
+            [script_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+
+        # Print output in real-time
+        for line in process.stdout:
+            print(line.strip())
+
+        # Wait for the process to complete
+        exit_code = process.wait()
+
+        # Clean up the temporary script
+        os.unlink(script_path)
+
+        if exit_code == 0:
+            print(f"✅ Successfully connected to gamepad '{name}'")
+            return True
+        else:
+            print(f"❌ Failed to connect to gamepad '{name}' (exit code: {exit_code})")
+            return False
+    except Exception as e:
+        print(f"❌ Error during connection: {e}")
+        # Clean up the temporary script
+        try:
+            os.unlink(script_path)
+        except:
+            pass
+        return False
+
+
 def usage():
     print("Usage:")
     print("  python bluetooth_manager.py pair")
-    print("  python bluetooth_manager.py connect <gamepad_name> [--background] [--log=<path>]")
+    print("  python bluetooth_manager.py connect <gamepad_name>")
+    print("  python bluetooth_manager.py bconnect <gamepad_name>")
     print("  python bluetooth_manager.py status <gamepad_name>")
     print("  python bluetooth_manager.py list")
-    print("\nOptions:")
-    print("  --background    Run connection in background mode (detaches from terminal)")
-    print("  --log=<path>    Specify a custom log file path (default: ~/bluetooth_connect_<name>.log)")
+    print("\nCommands:")
+    print("  pair         Scan for and pair with a new gamepad")
+    print("  connect      Connect to a gamepad using the interactive approach")
+    print("  bconnect     Connect to a gamepad using direct bluetoothctl (better for SSH)")
+    print("  status       Check the status of a gamepad")
+    print("  list         List all configured gamepads")
     print("\nAvailable gamepads:")
     for name in config.GAMEPADS:
         print(f"  - {name}")
@@ -578,22 +612,19 @@ if __name__ == "__main__":
     if action == "pair":
         success = pair_mode()
         sys.exit(0 if success else 1)
-    elif action == "connect" and len(sys.argv) >= 3:
+    elif action == "connect" and len(sys.argv) == 3:
         # Get the gamepad name
         name = sys.argv[2]
 
-        # Parse options
-        background = False
-        log_file = None
-
-        for arg in sys.argv[3:]:
-            if arg == "--background":
-                background = True
-            elif arg.startswith("--log="):
-                log_file = arg[6:]
-
         # Connect to the gamepad
-        success = connect_gamepad(name, background=background, log_file=log_file)
+        success = connect_gamepad(name)
+        sys.exit(0 if success else 1)
+    elif action == "bconnect" and len(sys.argv) == 3:
+        # Get the gamepad name
+        name = sys.argv[2]
+
+        # Connect to the gamepad using the direct bluetoothctl approach
+        success = bconnect_gamepad(name)
         sys.exit(0 if success else 1)
     elif action == "status" and len(sys.argv) == 3:
         name = sys.argv[2]

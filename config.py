@@ -117,9 +117,18 @@ alias l='ls -CF'
 
 # Bluetooth gamepad connection aliases - only created if DYS_RPI is set
 if [ -n "${DYS_RPI}" ]; then
+    # Standard connection (interactive approach)
     alias btc='python3 ${DYS_RPI}/scripts/bluetooth_manager.py connect'
+
+    # Direct connection (better for SSH remote sessions)
+    alias btbc='python3 ${DYS_RPI}/scripts/bluetooth_manager.py bconnect'
+
+    # Status and list commands
     alias bts='python3 ${DYS_RPI}/scripts/bluetooth_manager.py status'
     alias btl='python3 ${DYS_RPI}/scripts/bluetooth_manager.py list'
+
+    # Pairing command
+    alias btp='python3 ${DYS_RPI}/scripts/bluetooth_manager.py pair'
 fi
 """
 
